@@ -87,25 +87,6 @@ st.markdown(
             margin-top: 0.3rem;
         }
 
-        .cost-card {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 14px;
-            padding: 1rem;
-            margin-top: 0.8rem;
-        }
-
-        .cost-title {
-            font-weight: 700;
-            color: #1e3a8a;
-        }
-
-        .cost-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1d4ed8;
-        }
-
         .badge {
             display: inline-block;
             padding: 0.25rem 0.6rem;
@@ -237,7 +218,6 @@ def create_default_dataframe():
 
 if "competitions" not in st.session_state:
     st.session_state.competitions = create_default_dataframe()
-
 else:
     current = st.session_state.competitions
 
@@ -302,7 +282,7 @@ def format_date(d):
 
 
 # ============================================================
-# GÉOCODAGE DE L'ADRESSE DU CLUB
+# GÉOCODAGE DU CLUB
 # ============================================================
 
 def geocode_address(address):
@@ -346,7 +326,7 @@ def geocode_address(address):
 
 
 # ============================================================
-# DISTANCE À VOL D'OISEAU - SECOURS
+# DISTANCE À VOL D'OISEAU
 # ============================================================
 
 def haversine_distance(
@@ -362,9 +342,7 @@ def haversine_distance(
     lat2 = math.radians(lat2)
 
     delta_lat = math.radians(lat2 - lat1)
-    delta_lon = math.radians(
-        lon2 - lon1
-    )
+    delta_lon = math.radians(lon2 - lon1)
 
     a = (
         math.sin(delta_lat / 2) ** 2
@@ -382,9 +360,10 @@ def haversine_distance(
 
 
 # ============================================================
-# DISTANCE ROUTIÈRE OSRM
+# DISTANCE ROUTIÈRE
 # ============================================================
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def road_distance(
     start_lat,
     start_lon,
@@ -396,7 +375,7 @@ def road_distance(
 
         url = (
             "https://router.project-osrm.org/"
-            f"route/v1/driving/"
+            "route/v1/driving/"
             f"{start_lon},{start_lat};"
             f"{end_lon},{end_lat}"
         )
@@ -420,13 +399,11 @@ def road_distance(
             return None
 
         distance_km = (
-            data["routes"][0]["distance"]
-            / 1000
+            data["routes"][0]["distance"] / 1000
         )
 
         duration_minutes = (
-            data["routes"][0]["duration"]
-            / 60
+            data["routes"][0]["duration"] / 60
         )
 
         return distance_km, duration_minutes
@@ -436,7 +413,7 @@ def road_distance(
 
 
 # ============================================================
-# CALCUL DU COÛT
+# CALCUL DU TRAJET
 # ============================================================
 
 def calculate_trip(
@@ -450,11 +427,17 @@ def calculate_trip(
     if club["Longitude"] is None:
         return None
 
+    if pd.isna(competition_lat):
+        return None
+
+    if pd.isna(competition_lon):
+        return None
+
     route = road_distance(
         club["Latitude"],
         club["Longitude"],
-        competition_lat,
-        competition_lon,
+        float(competition_lat),
+        float(competition_lon),
     )
 
     if route is not None:
@@ -467,15 +450,13 @@ def calculate_trip(
         distance_one_way = haversine_distance(
             club["Latitude"],
             club["Longitude"],
-            competition_lat,
-            competition_lon,
+            float(competition_lat),
+            float(competition_lon),
         )
 
         duration_one_way = None
 
-    distance_round_trip = (
-        distance_one_way * 2
-    )
+    distance_round_trip = distance_one_way * 2
 
     fuel_liters = (
         distance_round_trip
@@ -657,8 +638,7 @@ if page == "🏠 Tableau de bord":
     )
 
     objectives = df[
-        df["Importance"]
-        == "Objectif principal"
+        df["Importance"] == "Objectif principal"
     ].sort_values("Date")
 
     if objectives.empty:
@@ -789,36 +769,31 @@ elif page == "📅 Calendrier":
     if selected_style != "Tous":
 
         filtered = filtered[
-            filtered["Style"]
-            == selected_style
+            filtered["Style"] == selected_style
         ]
 
     if selected_level != "Tous":
 
         filtered = filtered[
-            filtered["Niveau"]
-            == selected_level
+            filtered["Niveau"] == selected_level
         ]
 
     if selected_category != "Toutes":
 
         filtered = filtered[
-            filtered["Categorie"]
-            == selected_category
+            filtered["Categorie"] == selected_category
         ]
 
     if selected_region != "Toutes":
 
         filtered = filtered[
-            filtered["Région"]
-            == selected_region
+            filtered["Région"] == selected_region
         ]
 
     if selected_importance != "Toutes":
 
         filtered = filtered[
-            filtered["Importance"]
-            == selected_importance
+            filtered["Importance"] == selected_importance
         ]
 
     if only_future:
@@ -827,9 +802,7 @@ elif page == "📅 Calendrier":
             filtered["Date"] >= date.today()
         ]
 
-    filtered = filtered.sort_values(
-        "Date"
-    )
+    filtered = filtered.sort_values("Date")
 
     st.divider()
 
@@ -854,9 +827,7 @@ elif page == "📅 Calendrier":
 
             if days > 0:
 
-                countdown = (
-                    f"dans {days} jours"
-                )
+                countdown = f"dans {days} jours"
 
             elif days == 0:
 
@@ -864,13 +835,9 @@ elif page == "📅 Calendrier":
 
             else:
 
-                countdown = (
-                    f"il y a {-days} jours"
-                )
+                countdown = f"il y a {-days} jours"
 
-            with st.container(
-                border=True
-            ):
+            with st.container(border=True):
 
                 c1, c2, c3 = st.columns(
                     [2.2, 1.5, 1.5]
@@ -883,8 +850,7 @@ elif page == "📅 Calendrier":
                     )
 
                     st.write(
-                        f"📅 "
-                        f"{format_date(competition['Date'])}"
+                        f"📅 {format_date(competition['Date'])}"
                         f" — {countdown}"
                     )
 
@@ -910,8 +876,7 @@ elif page == "📅 Calendrier":
                 with c3:
 
                     st.write(
-                        f"🎯 "
-                        f"{competition['Importance']}"
+                        f"🎯 {competition['Importance']}"
                     )
 
                     st.write(
@@ -919,9 +884,9 @@ elif page == "📅 Calendrier":
                         f"{competition['Organisateur']}"
                     )
 
-                # ----------------------------------------
-                # CALCUL DU TRAJET
-                # ----------------------------------------
+                # ========================================
+                # DÉPLACEMENT
+                # ========================================
 
                 if (
                     club["Latitude"] is not None
@@ -935,45 +900,20 @@ elif page == "📅 Calendrier":
 
                     if trip:
 
-                        st.markdown(
+                        st.info(
                             f"""
-                            <div class="cost-card">
+🚗 **Déplacement**
 
-                                <div class="cost-title">
-                                    🚗 Déplacement
-                                </div>
+📏 **{trip['distance_aller']:.0f} km** aller
+· **{trip['distance_AR']:.0f} km** aller-retour
 
-                                <div>
-                                    📏
-                                    {trip['distance_aller']:.0f}
-                                    km aller
-                                    ·
-                                    {trip['distance_AR']:.0f}
-                                    km A/R
-                                </div>
+⛽ **{trip['litres']:.1f} L**
+· **{trip['carburant']:.2f} €** de carburant
 
-                                <div>
-                                    ⛽
-                                    {trip['litres']:.1f} L
-                                    ·
-                                    {trip['carburant']:.2f} €
-                                    de carburant
-                                </div>
+🛣️ **{trip['peages']:.2f} €** de péages
 
-                                <div>
-                                    🛣️
-                                    {trip['peages']:.2f} €
-                                    de péages
-                                </div>
-
-                                <div class="cost-value">
-                                    💰
-                                    {trip['total']:.2f} €
-                                </div>
-
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
+💰 **Coût total estimé : {trip['total']:.2f} €**
+"""
                         )
 
                 if competition["Description"]:
@@ -1009,6 +949,7 @@ elif page == "🗺️ Carte":
             ["Tous"]
             + sorted(
                 df["Niveau"]
+                .dropna()
                 .unique()
                 .tolist()
             ),
@@ -1021,6 +962,7 @@ elif page == "🗺️ Carte":
             ["Tous"]
             + sorted(
                 df["Style"]
+                .dropna()
                 .unique()
                 .tolist()
             ),
@@ -1031,15 +973,13 @@ elif page == "🗺️ Carte":
     if map_level != "Tous":
 
         map_df = map_df[
-            map_df["Niveau"]
-            == map_level
+            map_df["Niveau"] == map_level
         ]
 
     if map_style != "Tous":
 
         map_df = map_df[
-            map_df["Style"]
-            == map_style
+            map_df["Style"] == map_style
         ]
 
     map_df = map_df.dropna(
@@ -1082,7 +1022,7 @@ elif page == "🗺️ Carte":
 
 
 # ============================================================
-# AJOUT COMPÉTITION
+# AJOUT D'UNE COMPÉTITION
 # ============================================================
 
 elif page == "➕ Ajouter une compétition":
@@ -1280,23 +1220,17 @@ elif page == "🎯 Planification":
             ].copy()
 
             planning["Jours avant"] = (
-                planning["Date"]
-                .apply(
+                planning["Date"].apply(
                     lambda x:
                     (x - date.today()).days
                 )
             )
 
             planning["Phase"] = (
-                planning["Jours avant"]
-                .apply(
+                planning["Jours avant"].apply(
                     phase_planification
                 )
             )
-
-            # --------------------------------------------
-            # CALCUL DES DÉPLACEMENTS
-            # --------------------------------------------
 
             distances = []
             costs = []
@@ -1330,18 +1264,12 @@ elif page == "🎯 Planification":
                 "Date"
             )
 
-            # --------------------------------------------
-            # RÉCAPITULATIF
-            # --------------------------------------------
-
             total_distance = (
-                planning["Distance A/R"]
-                .sum()
+                planning["Distance A/R"].sum()
             )
 
             total_cost = (
-                planning["Coût trajet"]
-                .sum()
+                planning["Coût trajet"].sum()
             )
 
             c1, c2, c3 = st.columns(3)
@@ -1369,19 +1297,33 @@ elif page == "🎯 Planification":
 
             st.divider()
 
+            display_planning = planning[
+                [
+                    "Nom",
+                    "Date",
+                    "Ville",
+                    "Importance",
+                    "Distance A/R",
+                    "Coût trajet",
+                    "Jours avant",
+                    "Phase",
+                ]
+            ].copy()
+
+            display_planning[
+                "Distance A/R"
+            ] = display_planning[
+                "Distance A/R"
+            ].round(0).astype(int)
+
+            display_planning[
+                "Coût trajet"
+            ] = display_planning[
+                "Coût trajet"
+            ].round(2)
+
             st.dataframe(
-                planning[
-                    [
-                        "Nom",
-                        "Date",
-                        "Ville",
-                        "Importance",
-                        "Distance A/R",
-                        "Coût trajet",
-                        "Jours avant",
-                        "Phase",
-                    ]
-                ],
+                display_planning,
                 use_container_width=True,
                 hide_index=True,
             )
@@ -1565,10 +1507,6 @@ elif page == "🏠 Mon club":
                 f"{longitude:.5f}"
             )
 
-    # --------------------------------------------
-    # INFORMATIONS ACTUELLES
-    # --------------------------------------------
-
     if club["Latitude"] is not None:
 
         st.divider()
@@ -1595,17 +1533,17 @@ elif page == "🏠 Mon club":
             f"Longitude : `{club['Longitude']:.5f}`"
         )
 
+        club_map = pd.DataFrame(
+            [
+                {
+                    "latitude": club["Latitude"],
+                    "longitude": club["Longitude"],
+                }
+            ]
+        )
+
         st.map(
-            pd.DataFrame(
-                [
-                    {
-                        "latitude":
-                            club["Latitude"],
-                        "longitude":
-                            club["Longitude"],
-                    }
-                ]
-            ),
+            club_map,
             latitude="latitude",
             longitude="longitude",
             zoom=12,

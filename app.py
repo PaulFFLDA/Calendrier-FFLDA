@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import math
+import pydeck as pdk
 from datetime import date
 
 
@@ -120,7 +121,6 @@ if "club" not in st.session_state:
     st.session_state.club = DEFAULT_CLUB.copy()
 
 
-# Vérification de la structure des données
 current = st.session_state.competitions
 
 if not isinstance(current, pd.DataFrame):
@@ -138,12 +138,10 @@ club = st.session_state.club
 
 
 # ============================================================
-# FONCTIONS UTILITAIRES
+# FONCTIONS
 # ============================================================
 
 def format_date(value):
-    """Transforme une date en JJ/MM/AAAA."""
-
     if pd.isna(value):
         return ""
 
@@ -154,7 +152,6 @@ def format_date(value):
 
 
 def phase_planification(jours):
-    """Détermine une phase simple de planification."""
 
     if jours > 56:
         return "🟢 Préparation générale"
@@ -177,13 +174,12 @@ def phase_planification(jours):
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def geocode_address(address):
-    """
-    Recherche les coordonnées GPS d'une adresse
-    avec Nominatim / OpenStreetMap.
-    """
 
     try:
-        url = "https://nominatim.openstreetmap.org/search"
+
+        url = (
+            "https://nominatim.openstreetmap.org/search"
+        )
 
         params = {
             "q": address,
@@ -210,8 +206,13 @@ def geocode_address(address):
         if not results:
             return None, None
 
-        latitude = float(results[0]["lat"])
-        longitude = float(results[0]["lon"])
+        latitude = float(
+            results[0]["lat"]
+        )
+
+        longitude = float(
+            results[0]["lon"]
+        )
 
         return latitude, longitude
 
@@ -220,7 +221,7 @@ def geocode_address(address):
 
 
 # ============================================================
-# DISTANCE À VOL D'OISEAU
+# DISTANCE GÉOGRAPHIQUE
 # ============================================================
 
 def haversine_distance(
@@ -229,19 +230,24 @@ def haversine_distance(
     lat2,
     lon2,
 ):
-    """Calcule une distance approximative en kilomètres."""
 
     radius = 6371
 
     lat1 = math.radians(lat1)
     lat2 = math.radians(lat2)
 
-    delta_lat = math.radians(lat2 - lat1)
-    delta_lon = math.radians(lon2 - lon1)
+    delta_lat = math.radians(
+        lat2 - lat1
+    )
+
+    delta_lon = math.radians(
+        lon2 - lon1
+    )
 
     a = (
         math.sin(delta_lat / 2) ** 2
-        + math.cos(lat1)
+        +
+        math.cos(lat1)
         * math.cos(lat2)
         * math.sin(delta_lon / 2) ** 2
     )
@@ -265,9 +271,6 @@ def road_distance(
     end_lat,
     end_lon,
 ):
-    """
-    Utilise OSRM pour obtenir une distance routière.
-    """
 
     try:
 
@@ -306,7 +309,10 @@ def road_distance(
             route["duration"] / 60
         )
 
-        return distance_km, duration_minutes
+        return (
+            distance_km,
+            duration_minutes,
+        )
 
     except Exception:
         return None
@@ -320,15 +326,6 @@ def calculate_trip(
     competition_lat,
     competition_lon,
 ):
-    """
-    Calcule :
-    - distance aller
-    - distance A/R
-    - carburant
-    - coût carburant
-    - péages
-    - coût total
-    """
 
     if club["Latitude"] is None:
         return None
@@ -349,13 +346,11 @@ def calculate_trip(
         float(competition_lon),
     )
 
-    # Si OSRM fonctionne
     if route is not None:
 
         distance_one_way = route[0]
         duration_one_way = route[1]
 
-    # Sinon, on utilise une distance approximative
     else:
 
         distance_one_way = haversine_distance(
@@ -399,6 +394,122 @@ def calculate_trip(
 
 
 # ============================================================
+# COULEURS CARTE
+# ============================================================
+
+def importance_color(importance):
+
+    colors = {
+        "Objectif principal": [
+            220,
+            38,
+            38,
+        ],
+        "Objectif intermédiaire": [
+            249,
+            115,
+            22,
+        ],
+        "Compétition secondaire": [
+            37,
+            99,
+            235,
+        ],
+        "Préparation": [
+            22,
+            163,
+            74,
+        ],
+    }
+
+    return colors.get(
+        importance,
+        [107, 114, 128],
+    )
+
+
+# ============================================================
+# PRÉPARATION DES DONNÉES CARTE
+# ============================================================
+
+def create_map_dataframe(source_df):
+
+    map_rows = []
+
+    for _, competition in source_df.iterrows():
+
+        if pd.isna(
+            competition["Latitude"]
+        ):
+
+            continue
+
+        if pd.isna(
+            competition["Longitude"]
+        ):
+
+            continue
+
+        trip = calculate_trip(
+            competition["Latitude"],
+            competition["Longitude"],
+        )
+
+        if trip:
+
+            distance_ar = (
+                trip["distance_AR"]
+            )
+
+            total_cost = (
+                trip["total"]
+            )
+
+        else:
+
+            distance_ar = 0
+            total_cost = 0
+
+        color = importance_color(
+            competition["Importance"]
+        )
+
+        map_rows.append(
+            {
+                "Nom": competition["Nom"],
+                "Date": format_date(
+                    competition["Date"]
+                ),
+                "Ville": competition["Ville"],
+                "Région": competition["Région"],
+                "Style": competition["Style"],
+                "Categorie": competition["Categorie"],
+                "Niveau": competition["Niveau"],
+                "Importance": competition["Importance"],
+                "Organisateur": competition["Organisateur"],
+                "Latitude": float(
+                    competition["Latitude"]
+                ),
+                "Longitude": float(
+                    competition["Longitude"]
+                ),
+                "Distance_AR": round(
+                    distance_ar
+                ),
+                "Cout": round(
+                    total_cost,
+                    2,
+                ),
+                "color_r": color[0],
+                "color_g": color[1],
+                "color_b": color[2],
+            }
+        )
+
+    return pd.DataFrame(map_rows)
+
+
+# ============================================================
 # TITRE
 # ============================================================
 
@@ -414,7 +525,9 @@ st.caption(
 # MENU
 # ============================================================
 
-st.sidebar.title("🤼 Lutte Calendar")
+st.sidebar.title(
+    "🤼 Lutte Calendar"
+)
 
 st.sidebar.caption(
     "Calendrier & planification sportive"
@@ -439,7 +552,9 @@ page = st.sidebar.radio(
 
 if page == "🏠 Tableau de bord":
 
-    st.header("🏠 Tableau de bord")
+    st.header(
+        "🏠 Tableau de bord"
+    )
 
     today = date.today()
 
@@ -449,33 +564,43 @@ if page == "🏠 Tableau de bord":
 
     total = len(df)
 
-    upcoming_count = len(upcoming)
+    upcoming_count = len(
+        upcoming
+    )
 
-    regions = df["Région"].nunique()
+    regions = df[
+        "Région"
+    ].nunique()
 
-    cities = df["Ville"].nunique()
+    cities = df[
+        "Ville"
+    ].nunique()
 
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
+
         st.metric(
             "🏆 Compétitions",
             total,
         )
 
     with c2:
+
         st.metric(
             "📅 À venir",
             upcoming_count,
         )
 
     with c3:
+
         st.metric(
             "📍 Régions",
             regions,
         )
 
     with c4:
+
         st.metric(
             "🏙️ Villes",
             cities,
@@ -495,21 +620,30 @@ if page == "🏠 Tableau de bord":
 
     else:
 
-        for _, competition in upcoming.head(5).iterrows():
+        for _, competition in upcoming.head(
+            5
+        ).iterrows():
 
             days = (
-                competition["Date"] - today
+                competition["Date"]
+                - today
             ).days
 
             if days == 0:
-                countdown = "Aujourd'hui"
+
+                countdown = (
+                    "Aujourd'hui"
+                )
 
             else:
+
                 countdown = (
                     f"dans {days} jours"
                 )
 
-            with st.container(border=True):
+            with st.container(
+                border=True
+            ):
 
                 st.subheader(
                     f"🏆 {competition['Nom']}"
@@ -557,7 +691,8 @@ if page == "🏠 Tableau de bord":
         for _, competition in objectives.iterrows():
 
             days = (
-                competition["Date"] - today
+                competition["Date"]
+                - today
             ).days
 
             st.success(
@@ -577,10 +712,6 @@ elif page == "📅 Calendrier":
     st.header(
         "📅 Calendrier des compétitions"
     )
-
-    # --------------------------------------------------------
-    # FILTRES
-    # --------------------------------------------------------
 
     col1, col2, col3 = st.columns(3)
 
@@ -678,10 +809,6 @@ elif page == "📅 Calendrier":
             value=True,
         )
 
-    # --------------------------------------------------------
-    # APPLICATION DES FILTRES
-    # --------------------------------------------------------
-
     filtered = df.copy()
 
     if selected_style != "Tous":
@@ -736,10 +863,6 @@ elif page == "📅 Calendrier":
         f"{len(filtered)} compétition(s)"
     )
 
-    # --------------------------------------------------------
-    # AFFICHAGE
-    # --------------------------------------------------------
-
     if filtered.empty:
 
         st.info(
@@ -772,11 +895,9 @@ elif page == "📅 Calendrier":
                     f"il y a {-days} jours"
                 )
 
-            with st.container(border=True):
-
-                # --------------------------------------------
-                # IDENTITÉ
-                # --------------------------------------------
+            with st.container(
+                border=True
+            ):
 
                 st.subheader(
                     f"🏆 {competition['Nom']}"
@@ -791,10 +912,6 @@ elif page == "📅 Calendrier":
                     f"📍 **{competition['Ville']}** "
                     f"({competition['Région']})"
                 )
-
-                # --------------------------------------------
-                # INFORMATIONS SPORTIVES
-                # --------------------------------------------
 
                 c1, c2, c3 = st.columns(3)
 
@@ -824,25 +941,33 @@ elif page == "📅 Calendrier":
                     f"{competition['Importance']}"
                 )
 
-                if competition["Organisateur"]:
+                if competition[
+                    "Organisateur"
+                ]:
 
                     st.caption(
-                        f"Organisateur : "
+                        "Organisateur : "
                         f"{competition['Organisateur']}"
                     )
 
-                # --------------------------------------------
+                # ----------------------------------------
                 # DÉPLACEMENT
-                # --------------------------------------------
+                # ----------------------------------------
 
                 if (
-                    club["Latitude"] is not None
-                    and club["Longitude"] is not None
+                    club["Latitude"]
+                    is not None
+                    and club["Longitude"]
+                    is not None
                 ):
 
                     trip = calculate_trip(
-                        competition["Latitude"],
-                        competition["Longitude"],
+                        competition[
+                            "Latitude"
+                        ],
+                        competition[
+                            "Longitude"
+                        ],
                     )
 
                     if trip:
@@ -853,7 +978,9 @@ elif page == "📅 Calendrier":
                             "🚗 Déplacement"
                         )
 
-                        c1, c2, c3, c4 = st.columns(4)
+                        c1, c2, c3, c4 = (
+                            st.columns(4)
+                        )
 
                         with c1:
 
@@ -883,10 +1010,14 @@ elif page == "📅 Calendrier":
                                 f"{trip['total']:.2f} €",
                             )
 
-                        if trip["duree_aller"]:
+                        if trip[
+                            "duree_aller"
+                        ]:
 
                             duration = (
-                                trip["duree_aller"]
+                                trip[
+                                    "duree_aller"
+                                ]
                             )
 
                             hours = int(
@@ -911,19 +1042,9 @@ elif page == "📅 Calendrier":
                                 )
 
                             st.caption(
-                                f"⏱️ Temps de trajet estimé "
+                                "⏱️ Temps de trajet "
                                 f"aller : {duration_text}"
                             )
-
-                        st.write(
-                            f"⛽ **{trip['litres']:.1f} L** "
-                            f"de carburant"
-                        )
-
-                        st.write(
-                            f"🛣️ **{trip['peages']:.2f} €** "
-                            f"de péages"
-                        )
 
                     else:
 
@@ -940,39 +1061,49 @@ elif page == "📅 Calendrier":
                         "les déplacements."
                     )
 
-                # --------------------------------------------
-                # DESCRIPTION
-                # --------------------------------------------
-
-                if competition["Description"]:
+                if competition[
+                    "Description"
+                ]:
 
                     st.write(
-                        competition["Description"]
+                        competition[
+                            "Description"
+                        ]
                     )
 
-                # --------------------------------------------
-                # INSCRIPTION
-                # --------------------------------------------
-
-                if competition["Inscription"]:
+                if competition[
+                    "Inscription"
+                ]:
 
                     st.link_button(
                         "🔗 Ouvrir l'inscription",
-                        competition["Inscription"],
+                        competition[
+                            "Inscription"
+                        ],
                     )
 
 
 # ============================================================
-# CARTE
+# CARTE INTERACTIVE
 # ============================================================
 
 elif page == "🗺️ Carte":
 
     st.header(
-        "🗺️ Carte des compétitions"
+        "🗺️ Carte interactive"
     )
 
-    col1, col2 = st.columns(2)
+    st.write(
+        "Survole un marqueur pour afficher "
+        "les informations de la compétition. "
+        "Clique dessus pour la sélectionner."
+    )
+
+    # --------------------------------------------------------
+    # FILTRES
+    # --------------------------------------------------------
+
+    col1, col2, col3 = st.columns(3)
 
     with col1:
 
@@ -985,6 +1116,7 @@ elif page == "🗺️ Carte":
                 .unique()
                 .tolist()
             ),
+            key="map_level",
         )
 
     with col2:
@@ -998,65 +1130,377 @@ elif page == "🗺️ Carte":
                 .unique()
                 .tolist()
             ),
+            key="map_style",
         )
 
-    map_df = df.copy()
+    with col3:
+
+        map_importance = st.selectbox(
+            "🎯 Importance",
+            ["Toutes"]
+            + sorted(
+                df["Importance"]
+                .dropna()
+                .unique()
+                .tolist()
+            ),
+            key="map_importance",
+        )
+
+    map_df_source = df.copy()
 
     if map_level != "Tous":
 
-        map_df = map_df[
-            map_df["Niveau"]
+        map_df_source = map_df_source[
+            map_df_source["Niveau"]
             == map_level
         ]
 
     if map_style != "Tous":
 
-        map_df = map_df[
-            map_df["Style"]
+        map_df_source = map_df_source[
+            map_df_source["Style"]
             == map_style
         ]
 
-    map_df = map_df.dropna(
-        subset=[
-            "Latitude",
-            "Longitude",
+    if map_importance != "Toutes":
+
+        map_df_source = map_df_source[
+            map_df_source["Importance"]
+            == map_importance
         ]
+
+    map_df = create_map_dataframe(
+        map_df_source
     )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # LÉGENDE
+    # --------------------------------------------------------
 
     st.subheader(
-        f"📍 {len(map_df)} compétition(s)"
+        "🎨 Légende"
     )
 
-    if not map_df.empty:
+    legend_cols = st.columns(4)
 
-        st.map(
-            map_df,
-            latitude="Latitude",
-            longitude="Longitude",
-            zoom=5,
+    legend = [
+        (
+            "🟢",
+            "Préparation",
+        ),
+        (
+            "🟠",
+            "Objectif intermédiaire",
+        ),
+        (
+            "🔴",
+            "Objectif principal",
+        ),
+        (
+            "🔵",
+            "Compétition secondaire",
+        ),
+    ]
+
+    for column, item in zip(
+        legend_cols,
+        legend,
+    ):
+
+        with column:
+
+            st.write(
+                f"{item[0]} {item[1]}"
+            )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # CARTE
+    # --------------------------------------------------------
+
+    if map_df.empty:
+
+        st.info(
+            "Aucune compétition géolocalisée "
+            "ne correspond aux filtres."
         )
 
+    else:
+
+        # Centre de la carte
+        if (
+            club["Latitude"] is not None
+            and club["Longitude"] is not None
+        ):
+
+            center_lat = club[
+                "Latitude"
+            ]
+
+            center_lon = club[
+                "Longitude"
+            ]
+
+            initial_zoom = 6
+
+        else:
+
+            center_lat = map_df[
+                "Latitude"
+            ].mean()
+
+            center_lon = map_df[
+                "Longitude"
+            ].mean()
+
+            initial_zoom = 5
+
+        # --------------------------------------------
+        # COUCHE DES COMPÉTITIONS
+        # --------------------------------------------
+
+        competition_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=map_df,
+            get_position=[
+                "Longitude",
+                "Latitude",
+            ],
+            get_fill_color=[
+                "color_r",
+                "color_g",
+                "color_b",
+                210,
+            ],
+            get_line_color=[
+                255,
+                255,
+                255,
+                255,
+            ],
+            get_radius=7000,
+            radius_min_pixels=7,
+            radius_max_pixels=18,
+            line_width_min_pixels=2,
+            pickable=True,
+            auto_highlight=True,
+        )
+
+        layers = [
+            competition_layer
+        ]
+
+        # --------------------------------------------
+        # COUCHE DU CLUB
+        # --------------------------------------------
+
+        if (
+            club["Latitude"] is not None
+            and club["Longitude"] is not None
+        ):
+
+            club_df = pd.DataFrame(
+                [
+                    {
+                        "Nom": club["Nom"]
+                        or "Mon club",
+                        "Latitude": club[
+                            "Latitude"
+                        ],
+                        "Longitude": club[
+                            "Longitude"
+                        ],
+                    }
+                ]
+            )
+
+            club_layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=club_df,
+                get_position=[
+                    "Longitude",
+                    "Latitude",
+                ],
+                get_fill_color=[
+                    17,
+                    24,
+                    39,
+                    255,
+                ],
+                get_line_color=[
+                    255,
+                    255,
+                    255,
+                    255,
+                ],
+                get_radius=10000,
+                radius_min_pixels=10,
+                radius_max_pixels=22,
+                line_width_min_pixels=3,
+                pickable=True,
+            )
+
+            layers.append(
+                club_layer
+            )
+
+        # --------------------------------------------
+        # TOOLTIP
+        # --------------------------------------------
+
+        tooltip = {
+            "html": """
+                <div style="
+                    padding: 8px;
+                    font-family: Arial;
+                    color: #111827;
+                    background: white;
+                ">
+
+                    <div style="
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin-bottom: 8px;
+                    ">
+                        🏆 {Nom}
+                    </div>
+
+                    <div>
+                        📅 {Date}
+                    </div>
+
+                    <div>
+                        📍 {Ville} — {Région}
+                    </div>
+
+                    <div>
+                        🥋 {Style}
+                    </div>
+
+                    <div>
+                        👤 {Categorie}
+                    </div>
+
+                    <div>
+                        🏆 {Niveau}
+                    </div>
+
+                    <div>
+                        🎯 {Importance}
+                    </div>
+
+                    <div style="
+                        margin-top: 8px;
+                        border-top: 1px solid #ddd;
+                        padding-top: 8px;
+                    ">
+                        🚗 {Distance_AR} km A/R
+                    </div>
+
+                    <div>
+                        💰 {Cout} €
+                    </div>
+
+                </div>
+            """,
+            "style": {
+                "backgroundColor": "white",
+                "color": "#111827",
+                "fontSize": "13px",
+            },
+        }
+
+        # --------------------------------------------
+        # VUE
+        # --------------------------------------------
+
+        view_state = pdk.ViewState(
+            latitude=center_lat,
+            longitude=center_lon,
+            zoom=initial_zoom,
+            pitch=0,
+            bearing=0,
+        )
+
+        deck = pdk.Deck(
+            layers=layers,
+            initial_view_state=view_state,
+            tooltip=tooltip,
+            map_style="light",
+        )
+
+        st.pydeck_chart(
+            deck,
+            use_container_width=True,
+        )
+
+        st.caption(
+            "💡 Survole un point pour afficher "
+            "les détails de la compétition."
+        )
+
+        # ----------------------------------------------------
+        # LISTE SOUS LA CARTE
+        # ----------------------------------------------------
+
         st.divider()
+
+        st.subheader(
+            f"📍 {len(map_df)} compétition(s) "
+            "sur la carte"
+        )
 
         for _, competition in map_df.sort_values(
             "Date"
         ).iterrows():
 
-            st.write(
-                f"📍 **{competition['Nom']}** — "
-                f"{competition['Ville']} — "
-                f"{format_date(competition['Date'])}"
-            )
+            with st.container(
+                border=True
+            ):
 
-    else:
+                c1, c2, c3 = st.columns(
+                    [3, 2, 1]
+                )
 
-        st.info(
-            "Aucune compétition géolocalisée."
-        )
+                with c1:
+
+                    st.write(
+                        f"🏆 **{competition['Nom']}**"
+                    )
+
+                    st.caption(
+                        f"📍 {competition['Ville']} "
+                        f"· 📅 {competition['Date']}"
+                    )
+
+                with c2:
+
+                    st.write(
+                        f"🎯 {competition['Importance']}"
+                    )
+
+                    st.write(
+                        f"🥋 {competition['Style']}"
+                    )
+
+                with c3:
+
+                    st.metric(
+                        "🚗 A/R",
+                        f"{competition['Distance_AR']} km",
+                    )
+
+                    st.caption(
+                        f"💰 {competition['Cout']:.2f} €"
+                    )
 
 
 # ============================================================
-# AJOUT D'UNE COMPÉTITION
+# AJOUT COMPÉTITION
 # ============================================================
 
 elif page == "➕ Ajouter une compétition":
@@ -1287,8 +1731,12 @@ elif page == "🎯 Planification":
             for _, competition in planning.iterrows():
 
                 trip = calculate_trip(
-                    competition["Latitude"],
-                    competition["Longitude"],
+                    competition[
+                        "Latitude"
+                    ],
+                    competition[
+                        "Longitude"
+                    ],
                 )
 
                 if trip:
@@ -1307,24 +1755,28 @@ elif page == "🎯 Planification":
 
                     costs.append(0)
 
-            planning["Distance A/R"] = distances
+            planning[
+                "Distance A/R"
+            ] = distances
 
-            planning["Coût trajet"] = costs
+            planning[
+                "Coût trajet"
+            ] = costs
 
             planning = planning.sort_values(
                 "Date"
             )
 
-            # ------------------------------------------------
-            # TOTAUX
-            # ------------------------------------------------
-
             total_distance = (
-                planning["Distance A/R"].sum()
+                planning[
+                    "Distance A/R"
+                ].sum()
             )
 
             total_cost = (
-                planning["Coût trajet"].sum()
+                planning[
+                    "Coût trajet"
+                ].sum()
             )
 
             c1, c2, c3 = st.columns(3)
@@ -1351,10 +1803,6 @@ elif page == "🎯 Planification":
                 )
 
             st.divider()
-
-            # ------------------------------------------------
-            # TABLEAU
-            # ------------------------------------------------
 
             display_planning = planning[
                 [
@@ -1393,10 +1841,6 @@ elif page == "🎯 Planification":
                 hide_index=True,
             )
 
-            # ------------------------------------------------
-            # CHRONOLOGIE
-            # ------------------------------------------------
-
             st.subheader(
                 "📈 Chronologie"
             )
@@ -1425,16 +1869,12 @@ elif page == "🏠 Mon club":
     )
 
     st.write(
-        "Configure ici l'adresse de ton club et "
-        "les paramètres utilisés pour calculer "
+        "Configure ici l'adresse de ton club "
+        "et les paramètres utilisés pour calculer "
         "les déplacements."
     )
 
     st.divider()
-
-    # --------------------------------------------------------
-    # CLUB
-    # --------------------------------------------------------
 
     st.subheader(
         "🏠 Informations du club"
@@ -1467,10 +1907,6 @@ elif page == "🏠 Mon club":
             "Ville",
             value=club["Ville"],
         )
-
-    # --------------------------------------------------------
-    # VEHICULE
-    # --------------------------------------------------------
 
     st.divider()
 
@@ -1515,10 +1951,6 @@ elif page == "🏠 Mon club":
     )
 
     st.divider()
-
-    # --------------------------------------------------------
-    # ENREGISTRER
-    # --------------------------------------------------------
 
     save = st.button(
         "💾 Enregistrer les paramètres",
@@ -1578,10 +2010,6 @@ elif page == "🏠 Mon club":
 
             st.rerun()
 
-    # --------------------------------------------------------
-    # POSITION ACTUELLE
-    # --------------------------------------------------------
-
     if club["Latitude"] is not None:
 
         st.divider()
@@ -1613,8 +2041,12 @@ elif page == "🏠 Mon club":
         club_map = pd.DataFrame(
             [
                 {
-                    "latitude": club["Latitude"],
-                    "longitude": club["Longitude"],
+                    "latitude": club[
+                        "Latitude"
+                    ],
+                    "longitude": club[
+                        "Longitude"
+                    ],
                 }
             ]
         )
@@ -1675,5 +2107,5 @@ else:
     )
 
 st.sidebar.caption(
-    "🤼 Lutte Calendar V1.3"
+    "🤼 Lutte Calendar V1.4"
 )

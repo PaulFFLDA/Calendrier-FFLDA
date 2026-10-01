@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import date
 import math
 
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -13,6 +14,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
 
 # ============================================================
 # STYLE
@@ -31,121 +33,34 @@ st.markdown(
         padding-bottom: 3rem;
     }
 
-    .hero {
-        padding: 2rem;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #111827, #374151);
-        color: white;
-        margin-bottom: 1.5rem;
-    }
-
-    .hero h1 {
-        font-size: 2.5rem;
-        margin-bottom: 0.3rem;
-    }
-
-    .hero p {
-        color: #d1d5db;
-        font-size: 1.05rem;
-    }
-
-    .month-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        padding: 1.2rem;
-        margin-bottom: 1.2rem;
-    }
-
-    .month-title {
-        font-size: 1.35rem;
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 1rem;
-    }
-
-    .event {
-        border-left: 5px solid #2563eb;
-        padding: 0.8rem 1rem;
-        margin-bottom: 0.7rem;
-        background: #f9fafb;
-        border-radius: 8px;
-    }
-
-    .event-preparation {
-        border-left-color: #16a34a;
-    }
-
-    .event-ranking {
-        border-left-color: #f59e0b;
-    }
-
-    .event-objective {
-        border-left-color: #dc2626;
-    }
-
-    .event-stage {
-        border-left-color: #7c3aed;
-    }
-
-    .event-title {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: #111827;
-    }
-
-    .event-meta {
-        color: #6b7280;
-        font-size: 0.9rem;
-        margin-top: 0.25rem;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        margin-right: 0.3rem;
-    }
-
-    .green {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .orange {
-        background: #ffedd5;
-        color: #9a3412;
-    }
-
-    .red {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .blue {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-
-    .purple {
-        background: #ede9fe;
-        color: #6d28d9;
-    }
-
-    .gray {
-        background: #f3f4f6;
-        color: #374151;
-    }
-
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+
 # ============================================================
-# PARAMÈTRES CLUB
+# MOIS
+# ============================================================
+
+MONTHS = {
+    1: "Janvier",
+    2: "Février",
+    3: "Mars",
+    4: "Avril",
+    5: "Mai",
+    6: "Juin",
+    7: "Juillet",
+    8: "Août",
+    9: "Septembre",
+    10: "Octobre",
+    11: "Novembre",
+    12: "Décembre",
+}
+
+
+# ============================================================
+# PARAMÈTRES DU CLUB
 # ============================================================
 
 if "club_settings" not in st.session_state:
@@ -159,15 +74,20 @@ if "club_settings" not in st.session_state:
         "Consommation": 7.0,
     }
 
+
 settings = st.session_state.club_settings
 
+
 # ============================================================
-# DONNÉES D'EXEMPLE
+# COMPÉTITIONS PAR DÉFAUT
 # ============================================================
 
 DEFAULT_COMPETITIONS = [
 
-    # SEPTEMBRE
+    # --------------------------------------------------------
+    # SEPTEMBRE 2026
+    # --------------------------------------------------------
+
     {
         "Nom": "Tournoi de rentrée",
         "Date": date(2026, 9, 20),
@@ -202,13 +122,17 @@ DEFAULT_COMPETITIONS = [
         "Importance": "Objectif intermédiaire",
         "Type": "TNR",
         "Phase": "Préparation générale",
-        "Statut": "Officiel",
+        "Statut": "Prévisionnel",
         "Organisateur": "FFLDA",
         "Inscription": "",
-        "Description": "Tournoi national ranking.",
+        "Description": "Exemple de tournoi national ranking.",
     },
 
-    # OCTOBRE
+
+    # --------------------------------------------------------
+    # OCTOBRE 2026
+    # --------------------------------------------------------
+
     {
         "Nom": "Championnat de Normandie",
         "Date": date(2026, 10, 18),
@@ -246,10 +170,14 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "Organisation nationale",
         "Inscription": "",
-        "Description": "Tournoi national d'automne.",
+        "Description": "Exemple de tournoi national.",
     },
 
-    # NOVEMBRE
+
+    # --------------------------------------------------------
+    # NOVEMBRE 2026
+    # --------------------------------------------------------
+
     {
         "Nom": "TNR Novembre",
         "Date": date(2026, 11, 14),
@@ -267,7 +195,7 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "FFLDA",
         "Inscription": "",
-        "Description": "Ranking national.",
+        "Description": "Exemple de ranking national.",
     },
 
     {
@@ -290,7 +218,11 @@ DEFAULT_COMPETITIONS = [
         "Description": "Tournoi régional.",
     },
 
-    # DÉCEMBRE
+
+    # --------------------------------------------------------
+    # DÉCEMBRE 2026
+    # --------------------------------------------------------
+
     {
         "Nom": "Tournoi de Noël",
         "Date": date(2026, 12, 12),
@@ -311,7 +243,11 @@ DEFAULT_COMPETITIONS = [
         "Description": "Tournoi de fin d'année.",
     },
 
-    # JANVIER
+
+    # --------------------------------------------------------
+    # JANVIER 2027
+    # --------------------------------------------------------
+
     {
         "Nom": "TNR Janvier",
         "Date": date(2027, 1, 16),
@@ -329,7 +265,7 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "FFLDA",
         "Inscription": "",
-        "Description": "Ranking national.",
+        "Description": "Exemple de ranking national.",
     },
 
     {
@@ -352,7 +288,11 @@ DEFAULT_COMPETITIONS = [
         "Description": "Préparation aux échéances nationales.",
     },
 
-    # FÉVRIER
+
+    # --------------------------------------------------------
+    # FÉVRIER 2027
+    # --------------------------------------------------------
+
     {
         "Nom": "Championnat de Normandie",
         "Date": date(2027, 2, 7),
@@ -370,7 +310,7 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "Ligue régionale",
         "Inscription": "",
-        "Description": "Échéance régionale.",
+        "Description": "Exemple d'échéance régionale.",
     },
 
     {
@@ -390,10 +330,14 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "FFLDA",
         "Inscription": "",
-        "Description": "Dernière évaluation avant championnat.",
+        "Description": "Exemple de dernière évaluation.",
     },
 
-    # MARS
+
+    # --------------------------------------------------------
+    # MARS 2027
+    # --------------------------------------------------------
+
     {
         "Nom": "Championnat de France U17",
         "Date": date(2027, 3, 20),
@@ -411,10 +355,14 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "FFLDA",
         "Inscription": "",
-        "Description": "Objectif principal de la saison.",
+        "Description": "Exemple d'objectif national.",
     },
 
-    # AVRIL
+
+    # --------------------------------------------------------
+    # AVRIL 2027
+    # --------------------------------------------------------
+
     {
         "Nom": "Tournoi National de Printemps",
         "Date": date(2027, 4, 10),
@@ -435,7 +383,11 @@ DEFAULT_COMPETITIONS = [
         "Description": "Tournoi de reprise.",
     },
 
-    # MAI
+
+    # --------------------------------------------------------
+    # MAI 2027
+    # --------------------------------------------------------
+
     {
         "Nom": "Championnat de France Seniors",
         "Date": date(2027, 5, 15),
@@ -453,10 +405,14 @@ DEFAULT_COMPETITIONS = [
         "Statut": "Prévisionnel",
         "Organisateur": "FFLDA",
         "Inscription": "",
-        "Description": "Exemple d'objectif national.",
+        "Description": "Exemple d'objectif national senior.",
     },
 
-    # JUIN
+
+    # --------------------------------------------------------
+    # JUIN 2027
+    # --------------------------------------------------------
+
     {
         "Nom": "Tournoi de fin de saison",
         "Date": date(2027, 6, 12),
@@ -478,8 +434,9 @@ DEFAULT_COMPETITIONS = [
     },
 ]
 
+
 # ============================================================
-# COLONNES
+# COLONNES OBLIGATOIRES
 # ============================================================
 
 REQUIRED_COLUMNS = [
@@ -502,115 +459,119 @@ REQUIRED_COLUMNS = [
     "Description",
 ]
 
+
 # ============================================================
 # INITIALISATION
 # ============================================================
 
 def create_default_dataframe():
-    return pd.DataFrame(DEFAULT_COMPETITIONS)
+
+    return pd.DataFrame(
+        DEFAULT_COMPETITIONS
+    )
 
 
 if "competitions" not in st.session_state:
-    st.session_state.competitions = create_default_dataframe()
+
+    st.session_state.competitions = (
+        create_default_dataframe()
+    )
 
 else:
 
     current = st.session_state.competitions
 
-    if not isinstance(current, pd.DataFrame):
-        st.session_state.competitions = create_default_dataframe()
+    if not isinstance(
+        current,
+        pd.DataFrame,
+    ):
+
+        st.session_state.competitions = (
+            create_default_dataframe()
+        )
 
     elif not all(
         column in current.columns
         for column in REQUIRED_COLUMNS
     ):
-        st.session_state.competitions = create_default_dataframe()
+
+        st.session_state.competitions = (
+            create_default_dataframe()
+        )
 
 
 df = st.session_state.competitions.copy()
 
-# ============================================================
-# UTILITAIRES
-# ============================================================
 
-MONTHS = {
-    1: "Janvier",
-    2: "Février",
-    3: "Mars",
-    4: "Avril",
-    5: "Mai",
-    6: "Juin",
-    7: "Juillet",
-    8: "Août",
-    9: "Septembre",
-    10: "Octobre",
-    11: "Novembre",
-    12: "Décembre",
-}
-
+# ============================================================
+# FONCTIONS
+# ============================================================
 
 def format_date(value):
 
     if pd.isna(value):
         return ""
 
-    if hasattr(value, "strftime"):
-        return value.strftime("%d/%m/%Y")
+    if hasattr(
+        value,
+        "strftime",
+    ):
+
+        return value.strftime(
+            "%d/%m/%Y"
+        )
 
     return str(value)
 
 
-def event_class(importance):
-
-    if importance == "Objectif principal":
-        return "event-objective"
-
-    if importance == "Objectif intermédiaire":
-        return "event-ranking"
-
-    if importance == "Préparation":
-        return "event-preparation"
-
-    return ""
-
-
-def badge_class(importance):
-
-    if importance == "Objectif principal":
-        return "red"
-
-    if importance == "Objectif intermédiaire":
-        return "orange"
-
-    if importance == "Préparation":
-        return "green"
-
-    return "blue"
-
-
-def distance_km(lat1, lon1, lat2, lon2):
+def distance_km(
+    lat1,
+    lon1,
+    lat2,
+    lon2,
+):
 
     if any(
         pd.isna(x)
-        for x in [lat1, lon1, lat2, lon2]
+        for x in [
+            lat1,
+            lon1,
+            lat2,
+            lon2,
+        ]
     ):
+
         return None
 
     radius = 6371
 
-    lat1 = math.radians(float(lat1))
-    lon1 = math.radians(float(lon1))
-    lat2 = math.radians(float(lat2))
-    lon2 = math.radians(float(lon2))
+    lat1 = math.radians(
+        float(lat1)
+    )
+
+    lon1 = math.radians(
+        float(lon1)
+    )
+
+    lat2 = math.radians(
+        float(lat2)
+    )
+
+    lon2 = math.radians(
+        float(lon2)
+    )
 
     dlat = lat2 - lat1
     dlon = lon2 - lon1
 
     a = (
         math.sin(dlat / 2) ** 2
-        + math.cos(lat1)
-        * math.cos(lat2)
-        * math.sin(dlon / 2) ** 2
+        +
+        math.cos(lat1)
+        *
+        math.cos(lat2)
+        *
+        math.sin(dlon / 2) ** 2
     )
 
     c = 2 * math.atan2(
@@ -634,14 +595,54 @@ def travel_cost(distance):
         * settings["Consommation"]
     )
 
-    return liters * settings["Prix_essence"]
+    return (
+        liters
+        * settings["Prix_essence"]
+    )
+
+
+def importance_icon(
+    importance,
+):
+
+    if importance == "Objectif principal":
+        return "🔴"
+
+    if importance == "Objectif intermédiaire":
+        return "🟠"
+
+    if importance == "Préparation":
+        return "🟢"
+
+    return "🔵"
+
+
+def planning_phase(
+    days,
+):
+
+    if days < 0:
+        return "⚪ Compétition passée"
+
+    if days > 56:
+        return "🟢 Préparation générale"
+
+    if days > 28:
+        return "🟡 Préparation spécifique"
+
+    if days > 7:
+        return "🟠 Pré-compétition"
+
+    return "🔴 Affûtage"
 
 
 # ============================================================
-# SIDEBAR
+# MENU
 # ============================================================
 
-st.sidebar.title("🤼 Lutte Calendar")
+st.sidebar.title(
+    "🤼 Lutte Calendar"
+)
 
 st.sidebar.caption(
     "Calendrier & planification sportive"
@@ -660,56 +661,65 @@ page = st.sidebar.radio(
     ],
 )
 
+
 # ============================================================
 # TABLEAU DE BORD
 # ============================================================
 
 if page == "🏠 Tableau de bord":
 
-    st.markdown(
-        """
-        <div class="hero">
-            <h1>🤼 Lutte Calendar</h1>
-            <p>
-                Calendrier des compétitions,
-                déplacements et planification sportive.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.title(
+        "🤼 Lutte Calendar"
+    )
+
+    st.subheader(
+        "Calendrier & planification sportive"
+    )
+
+    st.write(
+        "Une application pour centraliser "
+        "les compétitions de lutte, les déplacements "
+        "et la planification de la saison."
     )
 
     today = date.today()
 
     upcoming = df[
         df["Date"] >= today
-    ].sort_values("Date")
+    ].sort_values(
+        "Date"
+    )
 
     objectives = df[
-        df["Importance"] == "Objectif principal"
+        df["Importance"]
+        == "Objectif principal"
     ]
 
-    c1, c2, c3, c4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-    with c1:
+    with col1:
+
         st.metric(
             "Compétitions",
             len(df),
         )
 
-    with c2:
+    with col2:
+
         st.metric(
             "À venir",
             len(upcoming),
         )
 
-    with c3:
+    with col3:
+
         st.metric(
-            "Objectifs",
+            "Objectifs principaux",
             len(objectives),
         )
 
-    with c4:
+    with col4:
+
         st.metric(
             "Villes",
             df["Ville"].nunique(),
@@ -717,11 +727,19 @@ if page == "🏠 Tableau de bord":
 
     st.divider()
 
-    st.subheader("🎯 Prochain objectif")
+    # --------------------------------------------------------
+    # PROCHAIN OBJECTIF
+    # --------------------------------------------------------
+
+    st.subheader(
+        "🎯 Prochain objectif"
+    )
 
     future_objectives = objectives[
         objectives["Date"] >= today
-    ].sort_values("Date")
+    ].sort_values(
+        "Date"
+    )
 
     if future_objectives.empty:
 
@@ -731,14 +749,17 @@ if page == "🏠 Tableau de bord":
 
     else:
 
-        competition = future_objectives.iloc[0]
+        competition = (
+            future_objectives.iloc[0]
+        )
 
         days = (
-            competition["Date"] - today
+            competition["Date"]
+            - today
         ).days
 
         st.success(
-            f"🎯 **{competition['Nom']}**\n\n"
+            f"🎯 **{competition['Nom']}**  \n"
             f"📅 {format_date(competition['Date'])}  \n"
             f"📍 {competition['Ville']}  \n"
             f"⏱️ Dans **{days} jours**"
@@ -746,56 +767,66 @@ if page == "🏠 Tableau de bord":
 
     st.divider()
 
-    st.subheader("📅 Prochaines compétitions")
+    # --------------------------------------------------------
+    # PROCHAINES COMPÉTITIONS
+    # --------------------------------------------------------
 
-    for _, competition in upcoming.head(5).iterrows():
+    st.subheader(
+        "📅 Prochaines compétitions"
+    )
 
-        days = (
-            competition["Date"] - today
-        ).days
+    if upcoming.empty:
 
-        cls = event_class(
-            competition["Importance"]
+        st.info(
+            "Aucune compétition à venir."
         )
 
-        badge = badge_class(
-            competition["Importance"]
-        )
+    else:
 
-        st.markdown(
-            f"""
-            <div class="event {cls}">
-                <div class="event-title">
-                    {competition["Nom"]}
-                </div>
+        for _, competition in (
+            upcoming.head(5).iterrows()
+        ):
 
-                <div class="event-meta">
-                    📅 {format_date(competition["Date"])}
-                    · 📍 {competition["Ville"]}
-                    · 🥋 {competition["Categorie"]}
-                </div>
+            days = (
+                competition["Date"]
+                - today
+            ).days
 
-                <br>
+            icon = importance_icon(
+                competition["Importance"]
+            )
 
-                <span class="badge {badge}">
-                    {competition["Importance"]}
-                </span>
+            with st.container(
+                border=True
+            ):
 
-                <span class="badge blue">
-                    {competition["Type"]}
-                </span>
+                st.markdown(
+                    f"### {icon} {competition['Nom']}"
+                )
 
-                <span class="badge gray">
-                    {competition["Statut"]}
-                </span>
+                st.write(
+                    f"📅 **{format_date(competition['Date'])}**"
+                    f" · "
+                    f"📍 **{competition['Ville']}**"
+                )
 
-                <br><br>
+                st.write(
+                    f"🥋 {competition['Style']}"
+                    f" · "
+                    f"👤 {competition['Categorie']}"
+                    f" · "
+                    f"🏆 {competition['Niveau']}"
+                )
 
-                ⏱️ Dans {days} jours
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                st.write(
+                    f"🎯 {competition['Importance']}"
+                    f" · "
+                    f"📌 {competition['Type']}"
+                )
+
+                st.caption(
+                    f"⏱️ Dans {days} jours"
+                )
 
 
 # ============================================================
@@ -804,12 +835,18 @@ if page == "🏠 Tableau de bord":
 
 elif page == "📅 Calendrier saison":
 
-    st.title("📅 Calendrier de la saison")
+    st.title(
+        "📅 Calendrier de la saison"
+    )
 
     st.caption(
-        "Saison 2026 / 2027 — exemple de calendrier "
-        "à adapter aux dates officielles."
+        "Saison 2026 / 2027 — exemples à adapter "
+        "aux dates officielles."
     )
+
+    # --------------------------------------------------------
+    # FILTRES
+    # --------------------------------------------------------
 
     col1, col2, col3 = st.columns(3)
 
@@ -818,10 +855,14 @@ elif page == "📅 Calendrier saison":
         selected_type = st.selectbox(
             "Type",
             [
-                "Tous",
+                "Tous"
             ]
-            + sorted(
-                df["Type"].dropna().unique()
+            +
+            sorted(
+                df["Type"]
+                .dropna()
+                .unique()
+                .tolist()
             ),
         )
 
@@ -830,10 +871,14 @@ elif page == "📅 Calendrier saison":
         selected_category = st.selectbox(
             "Catégorie",
             [
-                "Toutes",
+                "Toutes"
             ]
-            + sorted(
-                df["Categorie"].dropna().unique()
+            +
+            sorted(
+                df["Categorie"]
+                .dropna()
+                .unique()
+                .tolist()
             ),
         )
 
@@ -849,7 +894,8 @@ elif page == "📅 Calendrier saison":
     if selected_type != "Tous":
 
         calendar_df = calendar_df[
-            calendar_df["Type"] == selected_type
+            calendar_df["Type"]
+            == selected_type
         ]
 
     if selected_category != "Toutes":
@@ -862,18 +908,29 @@ elif page == "📅 Calendrier saison":
     if not show_past:
 
         calendar_df = calendar_df[
-            calendar_df["Date"] >= date.today()
+            calendar_df["Date"]
+            >= date.today()
         ]
 
     calendar_df = calendar_df.sort_values(
         "Date"
     )
 
-    for month_number in range(1, 13):
+    st.divider()
+
+    # --------------------------------------------------------
+    # MOIS PAR MOIS
+    # --------------------------------------------------------
+
+    for month_number in range(
+        1,
+        13,
+    ):
 
         month_df = calendar_df[
             calendar_df["Date"].apply(
-                lambda x: x.month
+                lambda x:
+                x.month
                 == month_number
             )
         ]
@@ -881,74 +938,136 @@ elif page == "📅 Calendrier saison":
         if month_df.empty:
             continue
 
-        st.markdown(
-            f"""
-            <div class="month-card">
-
-                <div class="month-title">
-                    📅 {MONTHS[month_number]}
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
+        # Titre du mois
+        st.header(
+            f"📅 {MONTHS[month_number]}"
         )
 
-        for _, competition in month_df.iterrows():
+        st.caption(
+            f"{len(month_df)} compétition(s)"
+        )
 
-            cls = event_class(
+        # ----------------------------------------------------
+        # COMPÉTITIONS DU MOIS
+        # ----------------------------------------------------
+
+        for _, competition in (
+            month_df.iterrows()
+        ):
+
+            icon = importance_icon(
                 competition["Importance"]
             )
 
-            badge = badge_class(
-                competition["Importance"]
-            )
+            with st.container(
+                border=True
+            ):
 
-            st.markdown(
-                f"""
-                <div class="event {cls}">
+                st.markdown(
+                    f"### {icon} {competition['Nom']}"
+                )
 
-                    <div class="event-title">
-                        {competition["Nom"]}
-                    </div>
+                st.write(
+                    f"📅 **{format_date(competition['Date'])}**"
+                    f" · "
+                    f"📍 **{competition['Ville']}**"
+                )
 
-                    <div class="event-meta">
-                        📅 {format_date(competition["Date"])}
-                        · 📍 {competition["Ville"]}
-                        · 👤 {competition["Categorie"]}
-                    </div>
+                col1, col2, col3 = (
+                    st.columns(3)
+                )
 
-                    <br>
+                with col1:
 
-                    <span class="badge {badge}">
-                        {competition["Importance"]}
-                    </span>
+                    st.write(
+                        f"🥋 {competition['Style']}"
+                    )
 
-                    <span class="badge blue">
-                        {competition["Type"]}
-                    </span>
+                    st.write(
+                        f"👤 {competition['Categorie']}"
+                    )
 
-                    <span class="badge purple">
-                        {competition["Phase"]}
-                    </span>
+                with col2:
 
-                    <span class="badge gray">
-                        {competition["Statut"]}
-                    </span>
+                    st.write(
+                        f"🏆 {competition['Niveau']}"
+                    )
 
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    st.write(
+                        f"📌 {competition['Type']}"
+                    )
+
+                with col3:
+
+                    st.write(
+                        f"🎯 {competition['Importance']}"
+                    )
+
+                    st.write(
+                        f"📊 {competition['Statut']}"
+                    )
+
+                st.info(
+                    f"🎯 Phase : {competition['Phase']}"
+                )
+
+                if (
+                    pd.notna(
+                        competition["Description"]
+                    )
+                    and competition["Description"]
+                ):
+
+                    st.caption(
+                        competition["Description"]
+                    )
+
+                # Distance
+                dist = distance_km(
+                    settings["Latitude"],
+                    settings["Longitude"],
+                    competition["Latitude"],
+                    competition["Longitude"],
+                )
+
+                if dist is not None:
+
+                    cost = travel_cost(
+                        dist
+                    )
+
+                    st.write(
+                        f"🚗 **{dist:.0f} km aller**"
+                        f" · "
+                        f"🔄 **{dist * 2:.0f} km A/R**"
+                        f" · "
+                        f"💰 **{cost:.2f} €**"
+                    )
+
+                if (
+                    pd.notna(
+                        competition["Inscription"]
+                    )
+                    and competition["Inscription"]
+                ):
+
+                    st.link_button(
+                        "🔗 Inscription",
+                        competition["Inscription"],
+                    )
+
+        st.divider()
 
 
 # ============================================================
-# LISTE
+# LISTE DES COMPÉTITIONS
 # ============================================================
 
 elif page == "📋 Liste des compétitions":
 
-    st.title("📋 Toutes les compétitions")
+    st.title(
+        "📋 Liste des compétitions"
+    )
 
     filtered = df.copy()
 
@@ -958,9 +1077,15 @@ elif page == "📋 Liste des compétitions":
 
         selected_region = st.selectbox(
             "Région",
-            ["Toutes"]
-            + sorted(
-                df["Région"].dropna().unique()
+            [
+                "Toutes"
+            ]
+            +
+            sorted(
+                df["Région"]
+                .dropna()
+                .unique()
+                .tolist()
             ),
         )
 
@@ -968,9 +1093,15 @@ elif page == "📋 Liste des compétitions":
 
         selected_type = st.selectbox(
             "Type",
-            ["Tous"]
-            + sorted(
-                df["Type"].dropna().unique()
+            [
+                "Tous"
+            ]
+            +
+            sorted(
+                df["Type"]
+                .dropna()
+                .unique()
+                .tolist()
             ),
         )
 
@@ -978,9 +1109,15 @@ elif page == "📋 Liste des compétitions":
 
         selected_importance = st.selectbox(
             "Importance",
-            ["Toutes"]
-            + sorted(
-                df["Importance"].dropna().unique()
+            [
+                "Toutes"
+            ]
+            +
+            sorted(
+                df["Importance"]
+                .dropna()
+                .unique()
+                .tolist()
             ),
         )
 
@@ -1005,62 +1142,88 @@ elif page == "📋 Liste des compétitions":
             == selected_importance
         ]
 
-    filtered = filtered.sort_values("Date")
+    filtered = filtered.sort_values(
+        "Date"
+    )
 
     st.write(
         f"**{len(filtered)} compétition(s)**"
     )
 
-    for _, competition in filtered.iterrows():
+    for _, competition in (
+        filtered.iterrows()
+    ):
 
-        with st.container(border=True):
+        icon = importance_icon(
+            competition["Importance"]
+        )
 
-            st.subheader(
-                competition["Nom"]
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### {icon} {competition['Nom']}"
             )
 
             st.write(
-                f"📅 {format_date(competition['Date'])}"
+                f"📅 **{format_date(competition['Date'])}**"
             )
 
             st.write(
-                f"📍 {competition['Ville']} "
-                f"({competition['Région']})"
+                f"📍 **{competition['Ville']}**"
+                f" · {competition['Région']}"
             )
 
-            c1, c2, c3 = st.columns(3)
+            col1, col2, col3 = (
+                st.columns(3)
+            )
 
-            with c1:
+            with col1:
+
                 st.write(
                     f"🥋 {competition['Style']}"
                 )
 
-            with c2:
-                st.write(
-                    f"🏆 {competition['Niveau']}"
-                )
-
-            with c3:
                 st.write(
                     f"👤 {competition['Categorie']}"
                 )
 
-            st.write(
-                f"🎯 {competition['Importance']}"
-            )
+            with col2:
+
+                st.write(
+                    f"🏆 {competition['Niveau']}"
+                )
+
+                st.write(
+                    f"📌 {competition['Type']}"
+                )
+
+            with col3:
+
+                st.write(
+                    f"🎯 {competition['Importance']}"
+                )
+
+                st.write(
+                    f"📊 {competition['Statut']}"
+                )
 
             st.write(
-                f"📌 {competition['Type']} "
-                f"— {competition['Phase']}"
+                f"🎯 Phase : {competition['Phase']}"
             )
 
-            if competition["Description"]:
+            if (
+                pd.notna(
+                    competition["Description"]
+                )
+                and competition["Description"]
+            ):
 
                 st.caption(
                     competition["Description"]
                 )
 
-            # DISTANCE
             dist = distance_km(
                 settings["Latitude"],
                 settings["Longitude"],
@@ -1068,14 +1231,18 @@ elif page == "📋 Liste des compétitions":
                 competition["Longitude"],
             )
 
-            cost = travel_cost(dist)
-
             if dist is not None:
 
+                cost = travel_cost(
+                    dist
+                )
+
                 st.info(
-                    f"🚗 {dist:.0f} km aller "
-                    f"· {dist * 2:.0f} km A/R "
-                    f"· 💰 {cost:.2f} € carburant"
+                    f"🚗 {dist:.0f} km aller"
+                    f" · "
+                    f"🔄 {dist * 2:.0f} km A/R"
+                    f" · "
+                    f"💰 {cost:.2f} € carburant"
                 )
 
 
@@ -1085,12 +1252,12 @@ elif page == "📋 Liste des compétitions":
 
 elif page == "🗺️ Carte":
 
-    st.title("🗺️ Carte interactive")
+    st.title(
+        "🗺️ Carte des compétitions"
+    )
 
     st.caption(
-        "Les points représentent les compétitions."
-        " Les informations détaillées apparaissent"
-        " dans le tableau situé sous la carte."
+        "Chaque point correspond à une compétition."
     )
 
     map_df = df.dropna(
@@ -1100,79 +1267,111 @@ elif page == "🗺️ Carte":
         ]
     ).copy()
 
-    st.map(
-        map_df,
-        latitude="Latitude",
-        longitude="Longitude",
-        zoom=5,
-    )
+    if map_df.empty:
 
-    st.divider()
-
-    st.subheader("📍 Compétitions")
-
-    for _, competition in map_df.sort_values(
-        "Date"
-    ).iterrows():
-
-        dist = distance_km(
-            settings["Latitude"],
-            settings["Longitude"],
-            competition["Latitude"],
-            competition["Longitude"],
+        st.warning(
+            "Aucune compétition géolocalisée."
         )
 
-        cost = travel_cost(dist)
+    else:
 
-        with st.expander(
-            f"📍 {competition['Nom']} — "
-            f"{competition['Ville']}"
+        st.map(
+            map_df,
+            latitude="Latitude",
+            longitude="Longitude",
+            zoom=5,
+        )
+
+        st.divider()
+
+        st.subheader(
+            "📍 Détails des compétitions"
+        )
+
+        for _, competition in (
+            map_df.sort_values(
+                "Date"
+            ).iterrows()
         ):
 
-            st.write(
-                f"📅 {format_date(competition['Date'])}"
+            icon = importance_icon(
+                competition["Importance"]
             )
 
-            st.write(
-                f"🥋 {competition['Style']}"
-            )
-
-            st.write(
-                f"👤 {competition['Categorie']}"
-            )
-
-            st.write(
-                f"🏆 {competition['Niveau']}"
-            )
-
-            st.write(
-                f"🎯 {competition['Importance']}"
-            )
-
-            if dist is not None:
+            with st.expander(
+                f"{icon} "
+                f"{competition['Nom']}"
+                f" — "
+                f"{competition['Ville']}"
+            ):
 
                 st.write(
-                    f"🚗 {dist:.0f} km aller"
+                    f"📅 {format_date(competition['Date'])}"
                 )
 
                 st.write(
-                    f"🔄 {dist * 2:.0f} km A/R"
+                    f"🥋 {competition['Style']}"
                 )
 
                 st.write(
-                    f"💰 {cost:.2f} € de carburant"
+                    f"👤 {competition['Categorie']}"
                 )
+
+                st.write(
+                    f"🏆 {competition['Niveau']}"
+                )
+
+                st.write(
+                    f"🎯 {competition['Importance']}"
+                )
+
+                st.write(
+                    f"📌 {competition['Type']}"
+                )
+
+                st.write(
+                    f"📊 {competition['Statut']}"
+                )
+
+                dist = distance_km(
+                    settings["Latitude"],
+                    settings["Longitude"],
+                    competition["Latitude"],
+                    competition["Longitude"],
+                )
+
+                if dist is not None:
+
+                    cost = travel_cost(
+                        dist
+                    )
+
+                    st.write(
+                        f"🚗 {dist:.0f} km aller"
+                    )
+
+                    st.write(
+                        f"🔄 {dist * 2:.0f} km A/R"
+                    )
+
+                    st.write(
+                        f"💰 {cost:.2f} € carburant"
+                    )
 
 
 # ============================================================
-# AJOUT
+# AJOUT D'UNE COMPÉTITION
 # ============================================================
 
 elif page == "➕ Ajouter une compétition":
 
-    st.title("➕ Ajouter une compétition")
+    st.title(
+        "➕ Ajouter une compétition"
+    )
 
-    with st.form("competition_form"):
+    with st.form(
+        "competition_form"
+    ):
 
         name = st.text_input(
             "Nom de la compétition *"
@@ -1226,7 +1425,7 @@ elif page == "➕ Ajouter une compétition":
             )
 
         competition_type = st.selectbox(
-            "Type",
+            "Type de compétition",
             [
                 "Tournoi",
                 "TNR",
@@ -1340,14 +1539,16 @@ elif page == "➕ Ajouter une compétition":
                     "Description": description,
                 }
 
-                st.session_state.competitions = pd.concat(
-                    [
-                        st.session_state.competitions,
-                        pd.DataFrame(
-                            [new_competition]
-                        ),
-                    ],
-                    ignore_index=True,
+                st.session_state.competitions = (
+                    pd.concat(
+                        [
+                            st.session_state.competitions,
+                            pd.DataFrame(
+                                [new_competition]
+                            ),
+                        ],
+                        ignore_index=True,
+                    )
                 )
 
                 st.success(
@@ -1363,11 +1564,13 @@ elif page == "➕ Ajouter une compétition":
 
 elif page == "🎯 Planification":
 
-    st.title("🎯 Planification sportive")
+    st.title(
+        "🎯 Planification sportive"
+    )
 
     st.write(
-        "Sélectionne les compétitions qui font partie "
-        "de la saison de ton lutteur."
+        "Sélectionne les compétitions qui font "
+        "partie de la saison du lutteur."
     )
 
     athlete = st.text_input(
@@ -1385,7 +1588,9 @@ elif page == "🎯 Planification":
         if selected:
 
             planning = df[
-                df["Nom"].isin(selected)
+                df["Nom"].isin(
+                    selected
+                )
             ].copy()
 
             planning["Jours avant"] = (
@@ -1396,25 +1601,13 @@ elif page == "🎯 Planification":
                 )
             )
 
-            def planning_phase(days):
-
-                if days < 0:
-                    return "⚪ Passée"
-
-                if days > 56:
-                    return "🟢 Préparation générale"
-
-                if days > 28:
-                    return "🟡 Préparation spécifique"
-
-                if days > 7:
-                    return "🟠 Pré-compétition"
-
-                return "🔴 Affûtage"
-
-            planning["Phase actuelle"] = (
+            planning[
+                "Phase actuelle"
+            ] = (
                 planning["Jours avant"]
-                .apply(planning_phase)
+                .apply(
+                    planning_phase
+                )
             )
 
             planning = planning.sort_values(
@@ -1448,12 +1641,43 @@ elif page == "🎯 Planification":
                 "🗓️ Chronologie"
             )
 
-            for _, competition in planning.iterrows():
+            for _, competition in (
+                planning.iterrows()
+            ):
+
+                days = (
+                    competition["Jours avant"]
+                )
+
+                if days > 0:
+
+                    timing = (
+                        f"dans {days} jours"
+                    )
+
+                elif days == 0:
+
+                    timing = "aujourd'hui"
+
+                else:
+
+                    timing = (
+                        f"il y a {-days} jours"
+                    )
+
+                icon = importance_icon(
+                    competition[
+                        "Importance"
+                    ]
+                )
 
                 st.write(
-                    f"**{format_date(competition['Date'])}** "
-                    f"— {competition['Nom']} "
-                    f"→ {competition['Phase']}"
+                    f"{icon} "
+                    f"**{format_date(competition['Date'])}**"
+                    f" — "
+                    f"**{competition['Nom']}**"
+                    f" · "
+                    f"{timing}"
                 )
 
         else:
@@ -1476,14 +1700,18 @@ elif page == "🎯 Planification":
 
 elif page == "⚙️ Paramètres club":
 
-    st.title("⚙️ Paramètres du club")
+    st.title(
+        "⚙️ Paramètres du club"
+    )
 
     st.write(
-        "Ces paramètres servent à calculer automatiquement "
+        "Ces paramètres permettent de calculer "
         "les distances et les coûts de déplacement."
     )
 
-    with st.form("club_settings"):
+    with st.form(
+        "club_settings_form"
+    ):
 
         club_name = st.text_input(
             "Nom du club",
@@ -1522,7 +1750,7 @@ elif page == "⚙️ Paramètres club":
             )
 
         st.subheader(
-            "⛽ Paramètres véhicule"
+            "⛽ Véhicule"
         )
 
         fuel_price = st.number_input(
@@ -1568,7 +1796,15 @@ elif page == "⚙️ Paramètres club":
     st.divider()
 
     st.subheader(
-        "💰 Exemple de calcul"
+        "💰 Paramètres actuels"
+    )
+
+    st.write(
+        f"Club : **{settings['Nom']}**"
+    )
+
+    st.write(
+        f"Adresse : **{settings['Adresse']}**"
     )
 
     st.write(
@@ -1589,7 +1825,7 @@ elif page == "⚙️ Paramètres club":
 st.sidebar.divider()
 
 st.sidebar.caption(
-    "🤼 Lutte Calendar V1.5"
+    "🤼 Lutte Calendar V1.6"
 )
 
 st.sidebar.caption(

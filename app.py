@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import date, timedelta
+from datetime import date
 
 # ============================================================
 # CONFIGURATION
@@ -113,74 +113,108 @@ st.markdown(
             background: #dbeafe;
             color: #1e40af;
         }
-
-        .section-title {
-            margin-top: 1.5rem;
-            margin-bottom: 0.8rem;
-        }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ============================================================
-# DONNÉES INITIALES
+# DONNÉES PAR DÉFAUT
 # ============================================================
 
-if "competitions" not in st.session_state:
+DEFAULT_COMPETITIONS = [
+    {
+        "Nom": "Tournoi de rentrée",
+        "Date": date(2026, 9, 20),
+        "Ville": "Caen",
+        "Département": "Calvados",
+        "Région": "Normandie",
+        "Style": "Lutte libre",
+        "Niveau": "Régional",
+        "Categorie": "U17",
+        "Latitude": 49.1829,
+        "Longitude": -0.3707,
+        "Importance": "Préparation",
+        "Organisateur": "Comité régional",
+        "Inscription": "",
+        "Description": "Tournoi de rentrée.",
+    },
+    {
+        "Nom": "Championnat régional",
+        "Date": date(2026, 10, 18),
+        "Ville": "Rennes",
+        "Département": "Ille-et-Vilaine",
+        "Région": "Bretagne",
+        "Style": "Lutte gréco-romaine",
+        "Niveau": "Régional",
+        "Categorie": "U20",
+        "Latitude": 48.1173,
+        "Longitude": -1.6778,
+        "Importance": "Objectif intermédiaire",
+        "Organisateur": "Ligue régionale",
+        "Inscription": "",
+        "Description": "Championnat régional.",
+    },
+    {
+        "Nom": "Championnat de France",
+        "Date": date(2027, 2, 20),
+        "Ville": "Paris",
+        "Département": "Paris",
+        "Région": "Île-de-France",
+        "Style": "Lutte libre",
+        "Niveau": "National",
+        "Categorie": "Senior",
+        "Latitude": 48.8566,
+        "Longitude": 2.3522,
+        "Importance": "Objectif principal",
+        "Organisateur": "Fédération",
+        "Inscription": "",
+        "Description": "Championnat national.",
+    },
+]
 
-    st.session_state.competitions = pd.DataFrame(
-        [
-            {
-                "Nom": "Tournoi de rentrée",
-                "Date": date(2026, 9, 20),
-                "Ville": "Caen",
-                "Département": "Calvados",
-                "Région": "Normandie",
-                "Style": "Lutte libre",
-                "Niveau": "Régional",
-                "Categorie": "U17",
-                "Latitude": 49.1829,
-                "Longitude": -0.3707,
-                "Importance": "Préparation",
-                "Organisateur": "Comité régional",
-                "Inscription": "",
-                "Description": "Tournoi de rentrée.",
-            },
-            {
-                "Nom": "Championnat régional",
-                "Date": date(2026, 10, 18),
-                "Ville": "Rennes",
-                "Département": "Ille-et-Vilaine",
-                "Région": "Bretagne",
-                "Style": "Lutte gréco-romaine",
-                "Niveau": "Régional",
-                "Categorie": "U20",
-                "Latitude": 48.1173,
-                "Longitude": -1.6778,
-                "Importance": "Objectif intermédiaire",
-                "Organisateur": "Ligue régionale",
-                "Inscription": "",
-                "Description": "Championnat régional.",
-            },
-            {
-                "Nom": "Championnat de France",
-                "Date": date(2027, 2, 20),
-                "Ville": "Paris",
-                "Département": "Paris",
-                "Région": "Île-de-France",
-                "Style": "Lutte libre",
-                "Niveau": "National",
-                "Categorie": "Senior",
-                "Latitude": 48.8566,
-                "Longitude": 2.3522,
-                "Importance": "Objectif principal",
-                "Organisateur": "Fédération",
-                "Inscription": "",
-                "Description": "Championnat national.",
-            },
-        ]
-    )
+REQUIRED_COLUMNS = [
+    "Nom",
+    "Date",
+    "Ville",
+    "Département",
+    "Région",
+    "Style",
+    "Niveau",
+    "Categorie",
+    "Latitude",
+    "Longitude",
+    "Importance",
+    "Organisateur",
+    "Inscription",
+    "Description",
+]
+
+# ============================================================
+# INITIALISATION DES DONNÉES
+# ============================================================
+
+def create_default_dataframe():
+    return pd.DataFrame(DEFAULT_COMPETITIONS)
+
+
+if "competitions" not in st.session_state:
+    st.session_state.competitions = create_default_dataframe()
+
+else:
+    current = st.session_state.competitions
+
+    # Si une ancienne version de l'application
+    # est encore en mémoire, on repart sur la
+    # nouvelle structure.
+    if not isinstance(current, pd.DataFrame):
+        st.session_state.competitions = create_default_dataframe()
+
+    elif not all(
+        column in current.columns
+        for column in REQUIRED_COLUMNS
+    ):
+        st.session_state.competitions = create_default_dataframe()
 
 
 df = st.session_state.competitions.copy()
@@ -189,28 +223,35 @@ df = st.session_state.competitions.copy()
 # FONCTIONS
 # ============================================================
 
-
 def importance_badge(importance):
+
     if importance == "Objectif principal":
         return "badge-red"
-    elif importance == "Objectif intermédiaire":
+
+    if importance == "Objectif intermédiaire":
         return "badge-orange"
-    elif importance == "Préparation":
+
+    if importance == "Préparation":
         return "badge-green"
+
     return "badge-blue"
 
 
 def phase_planification(jours):
+
     if jours > 56:
         return "🟢 Préparation générale"
-    elif jours > 28:
+
+    if jours > 28:
         return "🟡 Préparation spécifique"
-    elif jours > 7:
+
+    if jours > 7:
         return "🟠 Pré-compétition"
-    elif jours >= 0:
+
+    if jours >= 0:
         return "🔴 Affûtage / compétition"
-    else:
-        return "🔵 Récupération"
+
+    return "🔵 Récupération"
 
 
 def format_date(d):
@@ -218,14 +259,13 @@ def format_date(d):
 
 
 # ============================================================
-# SIDEBAR
+# MENU
 # ============================================================
 
-st.sidebar.markdown(
-    """
-    # 🤼 Lutte Calendar
-    ### Calendrier & planification
-    """
+st.sidebar.title("🤼 Lutte Calendar")
+
+st.sidebar.caption(
+    "Calendrier & planification sportive"
 )
 
 page = st.sidebar.radio(
@@ -239,12 +279,6 @@ page = st.sidebar.radio(
     ],
 )
 
-st.sidebar.divider()
-
-st.sidebar.caption(
-    "V1.1 — Prototype de mutualisation du calendrier de lutte"
-)
-
 # ============================================================
 # TABLEAU DE BORD
 # ============================================================
@@ -256,8 +290,8 @@ if page == "🏠 Tableau de bord":
         <div class="hero">
             <h1>🤼 Lutte Calendar</h1>
             <p>
-                Le calendrier partagé des compétitions de lutte
-                et la première brique de planification sportive.
+                Calendrier partagé des compétitions
+                de lutte et planification sportive.
             </p>
         </div>
         """,
@@ -266,11 +300,9 @@ if page == "🏠 Tableau de bord":
 
     today = date.today()
 
-    upcoming = df[df["Date"] >= today].sort_values("Date")
-
-    # --------------------------------------------------------
-    # INDICATEURS
-    # --------------------------------------------------------
+    upcoming = df[
+        df["Date"] >= today
+    ].sort_values("Date")
 
     total = len(df)
     upcoming_count = len(upcoming)
@@ -279,7 +311,7 @@ if page == "🏠 Tableau de bord":
 
     c1, c2, c3, c4 = st.columns(4)
 
-    metrics = [
+    data = [
         (total, "Compétitions"),
         (upcoming_count, "À venir"),
         (regions, "Régions"),
@@ -288,26 +320,35 @@ if page == "🏠 Tableau de bord":
 
     for col, (number, label) in zip(
         [c1, c2, c3, c4],
-        metrics,
+        data,
     ):
+
         with col:
+
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-number">{number}</div>
-                    <div class="metric-label">{label}</div>
+                    <div class="metric-number">
+                        {number}
+                    </div>
+                    <div class="metric-label">
+                        {label}
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-    st.markdown(
-        '<h2 class="section-title">📅 Prochaines compétitions</h2>',
-        unsafe_allow_html=True,
-    )
+    st.divider()
+
+    st.subheader("📅 Prochaines compétitions")
 
     if upcoming.empty:
-        st.info("Aucune compétition à venir.")
+
+        st.info(
+            "Aucune compétition à venir."
+        )
+
     else:
 
         for _, competition in upcoming.head(5).iterrows():
@@ -316,11 +357,10 @@ if page == "🏠 Tableau de bord":
                 competition["Date"] - today
             ).days
 
-            countdown = (
-                "Aujourd'hui"
-                if days == 0
-                else f"dans {days} jours"
-            )
+            if days == 0:
+                countdown = "Aujourd'hui"
+            else:
+                countdown = f"dans {days} jours"
 
             badge = importance_badge(
                 competition["Importance"]
@@ -363,19 +403,18 @@ if page == "🏠 Tableau de bord":
                 unsafe_allow_html=True,
             )
 
-    st.markdown(
-        '<h2 class="section-title">🎯 Objectifs de la saison</h2>',
-        unsafe_allow_html=True,
-    )
+    st.subheader("🎯 Objectifs principaux")
 
     objectives = df[
         df["Importance"] == "Objectif principal"
     ].sort_values("Date")
 
     if objectives.empty:
+
         st.info(
-            "Aucun objectif principal n'est encore enregistré."
+            "Aucun objectif principal enregistré."
         )
+
     else:
 
         for _, competition in objectives.iterrows():
@@ -400,19 +439,13 @@ elif page == "📅 Calendrier":
 
     st.title("📅 Calendrier des compétitions")
 
-    st.write(
-        "Recherche et filtre les compétitions de la saison."
-    )
-
-    # --------------------------------------------------------
-    # FILTRES
-    # --------------------------------------------------------
-
     col1, col2, col3 = st.columns(3)
 
     with col1:
 
-        styles = ["Tous"] + sorted(
+        styles = [
+            "Tous"
+        ] + sorted(
             df["Style"].dropna().unique().tolist()
         )
 
@@ -423,7 +456,9 @@ elif page == "📅 Calendrier":
 
     with col2:
 
-        levels = ["Tous"] + sorted(
+        levels = [
+            "Tous"
+        ] + sorted(
             df["Niveau"].dropna().unique().tolist()
         )
 
@@ -434,7 +469,9 @@ elif page == "📅 Calendrier":
 
     with col3:
 
-        categories = ["Toutes"] + sorted(
+        categories = [
+            "Toutes"
+        ] + sorted(
             df["Categorie"].dropna().unique().tolist()
         )
 
@@ -447,7 +484,9 @@ elif page == "📅 Calendrier":
 
     with col4:
 
-        regions = ["Toutes"] + sorted(
+        regions = [
+            "Toutes"
+        ] + sorted(
             df["Région"].dropna().unique().tolist()
         )
 
@@ -458,7 +497,9 @@ elif page == "📅 Calendrier":
 
     with col5:
 
-        importances = ["Toutes"] + sorted(
+        importances = [
+            "Toutes"
+        ] + sorted(
             df["Importance"].dropna().unique().tolist()
         )
 
@@ -470,13 +511,9 @@ elif page == "📅 Calendrier":
     with col6:
 
         only_future = st.checkbox(
-            "Afficher uniquement les compétitions à venir",
+            "Uniquement les compétitions à venir",
             value=True,
         )
-
-    # --------------------------------------------------------
-    # APPLICATION DES FILTRES
-    # --------------------------------------------------------
 
     filtered = df.copy()
 
@@ -518,10 +555,6 @@ elif page == "📅 Calendrier":
         f"{len(filtered)} compétition(s)"
     )
 
-    # --------------------------------------------------------
-    # AFFICHAGE
-    # --------------------------------------------------------
-
     if filtered.empty:
 
         st.info(
@@ -543,10 +576,6 @@ elif page == "📅 Calendrier":
             else:
                 countdown = f"il y a {-days} jours"
 
-            badge = importance_badge(
-                competition["Importance"]
-            )
-
             with st.container(border=True):
 
                 c1, c2, c3 = st.columns(
@@ -555,13 +584,13 @@ elif page == "📅 Calendrier":
 
                 with c1:
 
-                    st.markdown(
-                        f"### {competition['Nom']}"
+                    st.subheader(
+                        competition["Nom"]
                     )
 
                     st.write(
-                        f"📅 **{format_date(competition['Date'])}** "
-                        f"· {countdown}"
+                        f"📅 {format_date(competition['Date'])}"
+                        f" — {countdown}"
                     )
 
                     st.write(
@@ -585,13 +614,8 @@ elif page == "📅 Calendrier":
 
                 with c3:
 
-                    st.markdown(
-                        f"""
-                        <span class="badge {badge}">
-                            {competition["Importance"]}
-                        </span>
-                        """,
-                        unsafe_allow_html=True,
+                    st.write(
+                        f"🎯 {competition['Importance']}"
                     )
 
                     st.write(
@@ -608,7 +632,7 @@ elif page == "📅 Calendrier":
                 if competition["Inscription"]:
 
                     st.link_button(
-                        "🔗 Inscription / informations",
+                        "🔗 Inscription",
                         competition["Inscription"],
                     )
 
@@ -621,20 +645,12 @@ elif page == "🗺️ Carte":
 
     st.title("🗺️ Carte des compétitions")
 
-    st.write(
-        "Visualise les compétitions sur le territoire."
-    )
-
-    # --------------------------------------------------------
-    # FILTRES CARTE
-    # --------------------------------------------------------
-
     col1, col2 = st.columns(2)
 
     with col1:
 
         map_level = st.selectbox(
-            "Niveau",
+            "🏆 Niveau",
             ["Tous"] + sorted(
                 df["Niveau"].unique().tolist()
             ),
@@ -643,7 +659,7 @@ elif page == "🗺️ Carte":
     with col2:
 
         map_style = st.selectbox(
-            "Style",
+            "🥋 Style",
             ["Tous"] + sorted(
                 df["Style"].unique().tolist()
             ),
@@ -652,30 +668,29 @@ elif page == "🗺️ Carte":
     map_df = df.copy()
 
     if map_level != "Tous":
+
         map_df = map_df[
             map_df["Niveau"] == map_level
         ]
 
     if map_style != "Tous":
+
         map_df = map_df[
             map_df["Style"] == map_style
         ]
 
     map_df = map_df.dropna(
-        subset=["Latitude", "Longitude"]
+        subset=[
+            "Latitude",
+            "Longitude",
+        ]
     )
 
     st.subheader(
         f"📍 {len(map_df)} compétition(s)"
     )
 
-    if map_df.empty:
-
-        st.info(
-            "Aucune compétition géolocalisée."
-        )
-
-    else:
+    if not map_df.empty:
 
         st.map(
             map_df,
@@ -685,8 +700,6 @@ elif page == "🗺️ Carte":
         )
 
         st.divider()
-
-        st.subheader("Compétitions")
 
         for _, competition in map_df.sort_values(
             "Date"
@@ -698,36 +711,29 @@ elif page == "🗺️ Carte":
                 f"{format_date(competition['Date'])}"
             )
 
+    else:
+
+        st.info(
+            "Aucune compétition géolocalisée."
+        )
+
 
 # ============================================================
-# AJOUT COMPÉTITION
+# AJOUT
 # ============================================================
 
 elif page == "➕ Ajouter une compétition":
 
     st.title("➕ Ajouter une compétition")
 
-    st.write(
-        "Ajoute une nouvelle compétition au calendrier."
-    )
-
-    st.info(
-        "Dans cette V1, les données sont conservées "
-        "pendant la session. La prochaine étape sera "
-        "de les enregistrer dans une base de données partagée."
-    )
-
     with st.form("competition_form"):
-
-        st.subheader("Informations générales")
 
         name = st.text_input(
             "Nom de la compétition *"
         )
 
         description = st.text_area(
-            "Description",
-            placeholder="Informations complémentaires..."
+            "Description"
         )
 
         col1, col2 = st.columns(2)
@@ -735,7 +741,7 @@ elif page == "➕ Ajouter une compétition":
         with col1:
 
             competition_date = st.date_input(
-                "Date de début *",
+                "Date *",
                 value=date.today(),
             )
 
@@ -773,8 +779,7 @@ elif page == "➕ Ajouter une compétition":
             )
 
             category = st.text_input(
-                "Catégorie",
-                placeholder="U15, U17, U20, Senior..."
+                "Catégorie"
             )
 
             importance = st.selectbox(
@@ -787,7 +792,7 @@ elif page == "➕ Ajouter une compétition":
                 ],
             )
 
-        st.subheader("📍 Localisation")
+        st.subheader("📍 Géolocalisation")
 
         col3, col4 = st.columns(2)
 
@@ -807,25 +812,16 @@ elif page == "➕ Ajouter une compétition":
                 format="%.6f",
             )
 
-        st.subheader("📞 Organisation")
+        organizer = st.text_input(
+            "Organisateur"
+        )
 
-        col5, col6 = st.columns(2)
-
-        with col5:
-
-            organizer = st.text_input(
-                "Organisateur"
-            )
-
-        with col6:
-
-            registration = st.text_input(
-                "Lien d'inscription",
-                placeholder="https://..."
-            )
+        registration = st.text_input(
+            "Lien d'inscription"
+        )
 
         submitted = st.form_submit_button(
-            "➕ Ajouter au calendrier",
+            "➕ Ajouter",
             use_container_width=True,
         )
 
@@ -859,16 +855,16 @@ elif page == "➕ Ajouter une compétition":
                 st.session_state.competitions = pd.concat(
                     [
                         st.session_state.competitions,
-                        pd.DataFrame([new_competition]),
+                        pd.DataFrame(
+                            [new_competition]
+                        ),
                     ],
                     ignore_index=True,
                 )
 
                 st.success(
-                    f"✅ {name} a été ajouté au calendrier."
+                    "✅ Compétition ajoutée !"
                 )
-
-                st.balloons()
 
 
 # ============================================================
@@ -879,11 +875,6 @@ elif page == "🎯 Planification":
 
     st.title("🎯 Planification sportive")
 
-    st.write(
-        "Construis une première planification de saison "
-        "à partir des compétitions."
-    )
-
     athlete = st.text_input(
         "Nom du lutteur",
         placeholder="Ex : Jean Dupont",
@@ -891,72 +882,47 @@ elif page == "🎯 Planification":
 
     if athlete:
 
-        st.subheader(
-            f"👤 Planification de {athlete}"
+        objective = st.selectbox(
+            "🎯 Objectif principal",
+            [
+                "Développement / apprentissage",
+                "Championnat régional",
+                "Championnat de France",
+                "Compétition internationale",
+                "Autre",
+            ],
         )
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            season = st.selectbox(
-                "Saison",
-                [
-                    "2026-2027",
-                    "2027-2028",
-                ],
-            )
-
-        with col2:
-
-            objective = st.selectbox(
-                "🎯 Objectif principal",
-                [
-                    "Développement / apprentissage",
-                    "Championnat régional",
-                    "Championnat de France",
-                    "Compétition internationale",
-                    "Autre",
-                ],
-            )
 
         st.success(
             f"Objectif : **{objective}**"
         )
 
-        st.divider()
-
-        st.subheader(
-            "📅 Sélection des compétitions"
-        )
-
-        available = df.sort_values(
-            "Date"
-        )
-
         selected = st.multiselect(
-            "Compétitions intégrées à la planification",
-            options=available["Nom"].tolist(),
+            "Sélectionner les compétitions",
+            options=df["Nom"].tolist(),
         )
 
         if selected:
 
-            planning = available[
-                available["Nom"].isin(selected)
+            planning = df[
+                df["Nom"].isin(selected)
             ].copy()
 
             planning["Jours avant"] = planning[
                 "Date"
             ].apply(
-                lambda x: (
-                    x - date.today()
-                ).days
+                lambda x:
+                (x - date.today()).days
             )
 
             planning["Phase"] = planning[
                 "Jours avant"
             ].apply(
                 phase_planification
+            )
+
+            planning = planning.sort_values(
+                "Date"
             )
 
             st.dataframe(
@@ -974,76 +940,29 @@ elif page == "🎯 Planification":
                 hide_index=True,
             )
 
-            st.divider()
-
             st.subheader(
-                "📈 Chronologie de la saison"
+                "📈 Chronologie"
             )
 
             for _, competition in planning.iterrows():
 
-                days = competition["Jours avant"]
-
-                phase = phase_planification(
-                    days
+                st.write(
+                    f"**{format_date(competition['Date'])}** "
+                    f"— {competition['Nom']} "
+                    f"→ {competition['Phase']}"
                 )
-
-                st.markdown(
-                    f"""
-                    **{format_date(competition['Date'])}**
-                    — {competition['Nom']}
-
-                    📍 {competition['Ville']}
-                    · {phase}
-                    """
-                )
-
-                st.divider()
-
-            st.subheader(
-                "🎯 Lecture de la planification"
-            )
-
-            objective_events = planning[
-                planning["Importance"]
-                == "Objectif principal"
-            ]
-
-            if len(objective_events) > 0:
-
-                st.success(
-                    "La planification contient un "
-                    "objectif principal."
-                )
-
-            else:
-
-                st.warning(
-                    "Aucun objectif principal n'est "
-                    "encore sélectionné."
-                )
-
-            preparation_events = planning[
-                planning["Importance"]
-                == "Préparation"
-            ]
-
-            st.info(
-                f"{len(preparation_events)} "
-                "compétition(s) de préparation."
-            )
 
         else:
 
             st.info(
-                "Sélectionne les compétitions qui "
-                "font partie de la saison du lutteur."
+                "Sélectionne les compétitions "
+                "de la saison."
             )
 
     else:
 
         st.info(
-            "Entre le nom d'un lutteur pour commencer."
+            "Entre le nom d'un lutteur."
         )
 
 
@@ -1053,14 +972,6 @@ elif page == "🎯 Planification":
 
 st.sidebar.divider()
 
-st.sidebar.markdown(
-    """
-    **Lutte Calendar V1.1**
-
-    📅 Calendrier  
-    🗺️ Géolocalisation  
-    🎯 Planification  
-
-    *Prototype en développement*
-    """
+st.sidebar.caption(
+    "🤼 Lutte Calendar V1.1"
 )

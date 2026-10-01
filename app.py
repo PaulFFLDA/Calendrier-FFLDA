@@ -4,6 +4,7 @@ import requests
 import math
 from datetime import date
 
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -15,110 +16,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ============================================================
-# STYLE
-# ============================================================
-
-st.markdown(
-    """
-    <style>
-        .main {
-            background-color: #f7f8fa;
-        }
-
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 3rem;
-        }
-
-        .hero {
-            padding: 2rem;
-            border-radius: 18px;
-            background: linear-gradient(135deg, #111827, #374151);
-            color: white;
-            margin-bottom: 1.5rem;
-        }
-
-        .hero h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.3rem;
-        }
-
-        .hero p {
-            color: #d1d5db;
-            font-size: 1.05rem;
-        }
-
-        .metric-card {
-            background: white;
-            padding: 1.2rem;
-            border-radius: 14px;
-            border: 1px solid #e5e7eb;
-            text-align: center;
-        }
-
-        .metric-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .metric-label {
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-
-        .competition-card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 1.2rem;
-            margin-bottom: 0.8rem;
-        }
-
-        .competition-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .competition-meta {
-            color: #6b7280;
-            margin-top: 0.3rem;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-right: 0.3rem;
-        }
-
-        .badge-green {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .badge-orange {
-            background: #ffedd5;
-            color: #9a3412;
-        }
-
-        .badge-red {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .badge-blue {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 # ============================================================
 # DONNÉES PAR DÉFAUT
@@ -175,6 +72,7 @@ DEFAULT_COMPETITIONS = [
     },
 ]
 
+
 REQUIRED_COLUMNS = [
     "Nom",
     "Date",
@@ -192,9 +90,6 @@ REQUIRED_COLUMNS = [
     "Description",
 ]
 
-# ============================================================
-# PARAMÈTRES DU CLUB
-# ============================================================
 
 DEFAULT_CLUB = {
     "Nom": "",
@@ -208,6 +103,7 @@ DEFAULT_CLUB = {
     "Peages": 0.0,
 }
 
+
 # ============================================================
 # INITIALISATION
 # ============================================================
@@ -218,45 +114,47 @@ def create_default_dataframe():
 
 if "competitions" not in st.session_state:
     st.session_state.competitions = create_default_dataframe()
-else:
-    current = st.session_state.competitions
-
-    if not isinstance(current, pd.DataFrame):
-        st.session_state.competitions = create_default_dataframe()
-
-    elif not all(
-        column in current.columns
-        for column in REQUIRED_COLUMNS
-    ):
-        st.session_state.competitions = create_default_dataframe()
 
 
 if "club" not in st.session_state:
     st.session_state.club = DEFAULT_CLUB.copy()
 
 
+# Vérification de la structure des données
+current = st.session_state.competitions
+
+if not isinstance(current, pd.DataFrame):
+    st.session_state.competitions = create_default_dataframe()
+
+elif not all(
+    column in current.columns
+    for column in REQUIRED_COLUMNS
+):
+    st.session_state.competitions = create_default_dataframe()
+
+
 df = st.session_state.competitions.copy()
 club = st.session_state.club
 
+
 # ============================================================
-# FONCTIONS
+# FONCTIONS UTILITAIRES
 # ============================================================
 
-def importance_badge(importance):
+def format_date(value):
+    """Transforme une date en JJ/MM/AAAA."""
 
-    if importance == "Objectif principal":
-        return "badge-red"
+    if pd.isna(value):
+        return ""
 
-    if importance == "Objectif intermédiaire":
-        return "badge-orange"
+    if hasattr(value, "strftime"):
+        return value.strftime("%d/%m/%Y")
 
-    if importance == "Préparation":
-        return "badge-green"
-
-    return "badge-blue"
+    return str(value)
 
 
 def phase_planification(jours):
+    """Détermine une phase simple de planification."""
 
     if jours > 56:
         return "🟢 Préparation générale"
@@ -273,22 +171,18 @@ def phase_planification(jours):
     return "🔵 Récupération"
 
 
-def format_date(d):
-
-    if pd.isna(d):
-        return ""
-
-    return d.strftime("%d/%m/%Y")
-
-
 # ============================================================
-# GÉOCODAGE DU CLUB
+# GÉOCODAGE
 # ============================================================
 
+@st.cache_data(ttl=86400, show_spinner=False)
 def geocode_address(address):
+    """
+    Recherche les coordonnées GPS d'une adresse
+    avec Nominatim / OpenStreetMap.
+    """
 
     try:
-
         url = "https://nominatim.openstreetmap.org/search"
 
         params = {
@@ -335,8 +229,9 @@ def haversine_distance(
     lat2,
     lon2,
 ):
+    """Calcule une distance approximative en kilomètres."""
 
-    R = 6371
+    radius = 6371
 
     lat1 = math.radians(lat1)
     lat2 = math.radians(lat2)
@@ -356,7 +251,7 @@ def haversine_distance(
         math.sqrt(1 - a),
     )
 
-    return R * c
+    return radius * c
 
 
 # ============================================================
@@ -370,6 +265,9 @@ def road_distance(
     end_lat,
     end_lon,
 ):
+    """
+    Utilise OSRM pour obtenir une distance routière.
+    """
 
     try:
 
@@ -398,12 +296,14 @@ def road_distance(
         if data.get("code") != "Ok":
             return None
 
+        route = data["routes"][0]
+
         distance_km = (
-            data["routes"][0]["distance"] / 1000
+            route["distance"] / 1000
         )
 
         duration_minutes = (
-            data["routes"][0]["duration"] / 60
+            route["duration"] / 60
         )
 
         return distance_km, duration_minutes
@@ -420,6 +320,15 @@ def calculate_trip(
     competition_lat,
     competition_lon,
 ):
+    """
+    Calcule :
+    - distance aller
+    - distance A/R
+    - carburant
+    - coût carburant
+    - péages
+    - coût total
+    """
 
     if club["Latitude"] is None:
         return None
@@ -440,11 +349,13 @@ def calculate_trip(
         float(competition_lon),
     )
 
+    # Si OSRM fonctionne
     if route is not None:
 
         distance_one_way = route[0]
         duration_one_way = route[1]
 
+    # Sinon, on utilise une distance approximative
     else:
 
         distance_one_way = haversine_distance(
@@ -456,7 +367,9 @@ def calculate_trip(
 
         duration_one_way = None
 
-    distance_round_trip = distance_one_way * 2
+    distance_round_trip = (
+        distance_one_way * 2
+    )
 
     fuel_liters = (
         distance_round_trip
@@ -486,6 +399,18 @@ def calculate_trip(
 
 
 # ============================================================
+# TITRE
+# ============================================================
+
+st.title("🤼 Lutte Calendar")
+
+st.caption(
+    "Calendrier des compétitions de lutte "
+    "et planification sportive"
+)
+
+
+# ============================================================
 # MENU
 # ============================================================
 
@@ -507,24 +432,14 @@ page = st.sidebar.radio(
     ],
 )
 
+
 # ============================================================
 # TABLEAU DE BORD
 # ============================================================
 
 if page == "🏠 Tableau de bord":
 
-    st.markdown(
-        """
-        <div class="hero">
-            <h1>🤼 Lutte Calendar</h1>
-            <p>
-                Calendrier partagé des compétitions
-                de lutte et planification sportive.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.header("🏠 Tableau de bord")
 
     today = date.today()
 
@@ -533,39 +448,38 @@ if page == "🏠 Tableau de bord":
     ].sort_values("Date")
 
     total = len(df)
+
     upcoming_count = len(upcoming)
+
     regions = df["Région"].nunique()
+
     cities = df["Ville"].nunique()
 
     c1, c2, c3, c4 = st.columns(4)
 
-    data = [
-        (total, "Compétitions"),
-        (upcoming_count, "À venir"),
-        (regions, "Régions"),
-        (cities, "Villes"),
-    ]
+    with c1:
+        st.metric(
+            "🏆 Compétitions",
+            total,
+        )
 
-    for col, (number, label) in zip(
-        [c1, c2, c3, c4],
-        data,
-    ):
+    with c2:
+        st.metric(
+            "📅 À venir",
+            upcoming_count,
+        )
 
-        with col:
+    with c3:
+        st.metric(
+            "📍 Régions",
+            regions,
+        )
 
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-number">
-                        {number}
-                    </div>
-                    <div class="metric-label">
-                        {label}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    with c4:
+        st.metric(
+            "🏙️ Villes",
+            cities,
+        )
 
     st.divider()
 
@@ -589,56 +503,47 @@ if page == "🏠 Tableau de bord":
 
             if days == 0:
                 countdown = "Aujourd'hui"
+
             else:
-                countdown = f"dans {days} jours"
+                countdown = (
+                    f"dans {days} jours"
+                )
 
-            badge = importance_badge(
-                competition["Importance"]
-            )
+            with st.container(border=True):
 
-            st.markdown(
-                f"""
-                <div class="competition-card">
+                st.subheader(
+                    f"🏆 {competition['Nom']}"
+                )
 
-                    <div class="competition-title">
-                        {competition["Nom"]}
-                    </div>
+                st.write(
+                    f"📅 **{format_date(competition['Date'])}** "
+                    f"— {countdown}"
+                )
 
-                    <div class="competition-meta">
-                        📅 {format_date(competition["Date"])}
-                        · 📍 {competition["Ville"]}
-                        · 🥋 {competition["Style"]}
-                    </div>
+                st.write(
+                    f"📍 **{competition['Ville']}** "
+                    f"({competition['Région']})"
+                )
 
-                    <br>
+                st.write(
+                    f"🥋 {competition['Style']} "
+                    f"· 👤 {competition['Categorie']} "
+                    f"· 🏆 {competition['Niveau']}"
+                )
 
-                    <span class="badge {badge}">
-                        {competition["Importance"]}
-                    </span>
+                st.write(
+                    f"🎯 **{competition['Importance']}**"
+                )
 
-                    <span class="badge badge-blue">
-                        {competition["Niveau"]}
-                    </span>
-
-                    <span class="badge badge-blue">
-                        {competition["Categorie"]}
-                    </span>
-
-                    <br><br>
-
-                    <strong>{countdown}</strong>
-
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    st.divider()
 
     st.subheader(
         "🎯 Objectifs principaux"
     )
 
     objectives = df[
-        df["Importance"] == "Objectif principal"
+        df["Importance"]
+        == "Objectif principal"
     ].sort_values("Date")
 
     if objectives.empty:
@@ -669,21 +574,26 @@ if page == "🏠 Tableau de bord":
 
 elif page == "📅 Calendrier":
 
-    st.title(
+    st.header(
         "📅 Calendrier des compétitions"
     )
+
+    # --------------------------------------------------------
+    # FILTRES
+    # --------------------------------------------------------
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
 
-        styles = [
-            "Tous"
-        ] + sorted(
-            df["Style"]
-            .dropna()
-            .unique()
-            .tolist()
+        styles = (
+            ["Tous"]
+            + sorted(
+                df["Style"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
         )
 
         selected_style = st.selectbox(
@@ -693,13 +603,14 @@ elif page == "📅 Calendrier":
 
     with col2:
 
-        levels = [
-            "Tous"
-        ] + sorted(
-            df["Niveau"]
-            .dropna()
-            .unique()
-            .tolist()
+        levels = (
+            ["Tous"]
+            + sorted(
+                df["Niveau"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
         )
 
         selected_level = st.selectbox(
@@ -709,13 +620,14 @@ elif page == "📅 Calendrier":
 
     with col3:
 
-        categories = [
-            "Toutes"
-        ] + sorted(
-            df["Categorie"]
-            .dropna()
-            .unique()
-            .tolist()
+        categories = (
+            ["Toutes"]
+            + sorted(
+                df["Categorie"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
         )
 
         selected_category = st.selectbox(
@@ -727,13 +639,14 @@ elif page == "📅 Calendrier":
 
     with col4:
 
-        regions = [
-            "Toutes"
-        ] + sorted(
-            df["Région"]
-            .dropna()
-            .unique()
-            .tolist()
+        regions = (
+            ["Toutes"]
+            + sorted(
+                df["Région"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
         )
 
         selected_region = st.selectbox(
@@ -743,13 +656,14 @@ elif page == "📅 Calendrier":
 
     with col5:
 
-        importances = [
-            "Toutes"
-        ] + sorted(
-            df["Importance"]
-            .dropna()
-            .unique()
-            .tolist()
+        importances = (
+            ["Toutes"]
+            + sorted(
+                df["Importance"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
         )
 
         selected_importance = st.selectbox(
@@ -764,45 +678,57 @@ elif page == "📅 Calendrier":
             value=True,
         )
 
+    # --------------------------------------------------------
+    # APPLICATION DES FILTRES
+    # --------------------------------------------------------
+
     filtered = df.copy()
 
     if selected_style != "Tous":
 
         filtered = filtered[
-            filtered["Style"] == selected_style
+            filtered["Style"]
+            == selected_style
         ]
 
     if selected_level != "Tous":
 
         filtered = filtered[
-            filtered["Niveau"] == selected_level
+            filtered["Niveau"]
+            == selected_level
         ]
 
     if selected_category != "Toutes":
 
         filtered = filtered[
-            filtered["Categorie"] == selected_category
+            filtered["Categorie"]
+            == selected_category
         ]
 
     if selected_region != "Toutes":
 
         filtered = filtered[
-            filtered["Région"] == selected_region
+            filtered["Région"]
+            == selected_region
         ]
 
     if selected_importance != "Toutes":
 
         filtered = filtered[
-            filtered["Importance"] == selected_importance
+            filtered["Importance"]
+            == selected_importance
         ]
 
     if only_future:
 
         filtered = filtered[
-            filtered["Date"] >= date.today()
+            filtered["Date"]
+            >= date.today()
         ]
 
-    filtered = filtered.sort_values("Date")
+    filtered = filtered.sort_values(
+        "Date"
+    )
 
     st.divider()
 
@@ -810,10 +736,15 @@ elif page == "📅 Calendrier":
         f"{len(filtered)} compétition(s)"
     )
 
+    # --------------------------------------------------------
+    # AFFICHAGE
+    # --------------------------------------------------------
+
     if filtered.empty:
 
         st.info(
-            "Aucune compétition ne correspond aux filtres."
+            "Aucune compétition ne correspond "
+            "aux filtres."
         )
 
     else:
@@ -827,7 +758,9 @@ elif page == "📅 Calendrier":
 
             if days > 0:
 
-                countdown = f"dans {days} jours"
+                countdown = (
+                    f"dans {days} jours"
+                )
 
             elif days == 0:
 
@@ -835,58 +768,72 @@ elif page == "📅 Calendrier":
 
             else:
 
-                countdown = f"il y a {-days} jours"
+                countdown = (
+                    f"il y a {-days} jours"
+                )
 
             with st.container(border=True):
 
-                c1, c2, c3 = st.columns(
-                    [2.2, 1.5, 1.5]
+                # --------------------------------------------
+                # IDENTITÉ
+                # --------------------------------------------
+
+                st.subheader(
+                    f"🏆 {competition['Nom']}"
                 )
+
+                st.write(
+                    f"📅 **{format_date(competition['Date'])}** "
+                    f"— {countdown}"
+                )
+
+                st.write(
+                    f"📍 **{competition['Ville']}** "
+                    f"({competition['Région']})"
+                )
+
+                # --------------------------------------------
+                # INFORMATIONS SPORTIVES
+                # --------------------------------------------
+
+                c1, c2, c3 = st.columns(3)
 
                 with c1:
 
-                    st.subheader(
-                        competition["Nom"]
-                    )
-
                     st.write(
-                        f"📅 {format_date(competition['Date'])}"
-                        f" — {countdown}"
-                    )
-
-                    st.write(
-                        f"📍 {competition['Ville']} "
-                        f"({competition['Région']})"
+                        f"🥋 **Style**\n\n"
+                        f"{competition['Style']}"
                     )
 
                 with c2:
 
                     st.write(
-                        f"🥋 {competition['Style']}"
-                    )
-
-                    st.write(
-                        f"👤 {competition['Categorie']}"
-                    )
-
-                    st.write(
-                        f"🏆 {competition['Niveau']}"
+                        f"👤 **Catégorie**\n\n"
+                        f"{competition['Categorie']}"
                     )
 
                 with c3:
 
                     st.write(
-                        f"🎯 {competition['Importance']}"
+                        f"🏆 **Niveau**\n\n"
+                        f"{competition['Niveau']}"
                     )
 
-                    st.write(
+                st.write(
+                    f"🎯 **Importance :** "
+                    f"{competition['Importance']}"
+                )
+
+                if competition["Organisateur"]:
+
+                    st.caption(
                         f"Organisateur : "
                         f"{competition['Organisateur']}"
                     )
 
-                # ========================================
+                # --------------------------------------------
                 # DÉPLACEMENT
-                # ========================================
+                # --------------------------------------------
 
                 if (
                     club["Latitude"] is not None
@@ -900,32 +847,117 @@ elif page == "📅 Calendrier":
 
                     if trip:
 
-                        st.info(
-                            f"""
-🚗 **Déplacement**
+                        st.divider()
 
-📏 **{trip['distance_aller']:.0f} km** aller
-· **{trip['distance_AR']:.0f} km** aller-retour
-
-⛽ **{trip['litres']:.1f} L**
-· **{trip['carburant']:.2f} €** de carburant
-
-🛣️ **{trip['peages']:.2f} €** de péages
-
-💰 **Coût total estimé : {trip['total']:.2f} €**
-"""
+                        st.subheader(
+                            "🚗 Déplacement"
                         )
+
+                        c1, c2, c3, c4 = st.columns(4)
+
+                        with c1:
+
+                            st.metric(
+                                "📏 Distance aller",
+                                f"{trip['distance_aller']:.0f} km",
+                            )
+
+                        with c2:
+
+                            st.metric(
+                                "🔄 Distance A/R",
+                                f"{trip['distance_AR']:.0f} km",
+                            )
+
+                        with c3:
+
+                            st.metric(
+                                "⛽ Carburant",
+                                f"{trip['carburant']:.2f} €",
+                            )
+
+                        with c4:
+
+                            st.metric(
+                                "💰 Coût total",
+                                f"{trip['total']:.2f} €",
+                            )
+
+                        if trip["duree_aller"]:
+
+                            duration = (
+                                trip["duree_aller"]
+                            )
+
+                            hours = int(
+                                duration // 60
+                            )
+
+                            minutes = int(
+                                duration % 60
+                            )
+
+                            if hours > 0:
+
+                                duration_text = (
+                                    f"{hours} h "
+                                    f"{minutes:02d}"
+                                )
+
+                            else:
+
+                                duration_text = (
+                                    f"{minutes} min"
+                                )
+
+                            st.caption(
+                                f"⏱️ Temps de trajet estimé "
+                                f"aller : {duration_text}"
+                            )
+
+                        st.write(
+                            f"⛽ **{trip['litres']:.1f} L** "
+                            f"de carburant"
+                        )
+
+                        st.write(
+                            f"🛣️ **{trip['peages']:.2f} €** "
+                            f"de péages"
+                        )
+
+                    else:
+
+                        st.warning(
+                            "Impossible de calculer "
+                            "le trajet."
+                        )
+
+                else:
+
+                    st.info(
+                        "🏠 Configure ton club dans "
+                        "« Mon club » pour calculer "
+                        "les déplacements."
+                    )
+
+                # --------------------------------------------
+                # DESCRIPTION
+                # --------------------------------------------
 
                 if competition["Description"]:
 
-                    st.caption(
+                    st.write(
                         competition["Description"]
                     )
+
+                # --------------------------------------------
+                # INSCRIPTION
+                # --------------------------------------------
 
                 if competition["Inscription"]:
 
                     st.link_button(
-                        "🔗 Inscription",
+                        "🔗 Ouvrir l'inscription",
                         competition["Inscription"],
                     )
 
@@ -936,7 +968,7 @@ elif page == "📅 Calendrier":
 
 elif page == "🗺️ Carte":
 
-    st.title(
+    st.header(
         "🗺️ Carte des compétitions"
     )
 
@@ -973,13 +1005,15 @@ elif page == "🗺️ Carte":
     if map_level != "Tous":
 
         map_df = map_df[
-            map_df["Niveau"] == map_level
+            map_df["Niveau"]
+            == map_level
         ]
 
     if map_style != "Tous":
 
         map_df = map_df[
-            map_df["Style"] == map_style
+            map_df["Style"]
+            == map_style
         ]
 
     map_df = map_df.dropna(
@@ -1027,7 +1061,7 @@ elif page == "🗺️ Carte":
 
 elif page == "➕ Ajouter une compétition":
 
-    st.title(
+    st.header(
         "➕ Ajouter une compétition"
     )
 
@@ -1175,6 +1209,8 @@ elif page == "➕ Ajouter une compétition":
                     "✅ Compétition ajoutée !"
                 )
 
+                st.rerun()
+
 
 # ============================================================
 # PLANIFICATION
@@ -1182,7 +1218,7 @@ elif page == "➕ Ajouter une compétition":
 
 elif page == "🎯 Planification":
 
-    st.title(
+    st.header(
         "🎯 Planification sportive"
     )
 
@@ -1191,7 +1227,13 @@ elif page == "🎯 Planification":
         placeholder="Ex : Jean Dupont",
     )
 
-    if athlete:
+    if not athlete:
+
+        st.info(
+            "Entre le nom d'un lutteur."
+        )
+
+    else:
 
         objective = st.selectbox(
             "🎯 Objectif principal",
@@ -1213,7 +1255,14 @@ elif page == "🎯 Planification":
             options=df["Nom"].tolist(),
         )
 
-        if selected:
+        if not selected:
+
+            st.info(
+                "Sélectionne les compétitions "
+                "de la saison."
+            )
+
+        else:
 
             planning = df[
                 df["Nom"].isin(selected)
@@ -1255,14 +1304,20 @@ elif page == "🎯 Planification":
                 else:
 
                     distances.append(0)
+
                     costs.append(0)
 
             planning["Distance A/R"] = distances
+
             planning["Coût trajet"] = costs
 
             planning = planning.sort_values(
                 "Date"
             )
+
+            # ------------------------------------------------
+            # TOTAUX
+            # ------------------------------------------------
 
             total_distance = (
                 planning["Distance A/R"].sum()
@@ -1297,6 +1352,10 @@ elif page == "🎯 Planification":
 
             st.divider()
 
+            # ------------------------------------------------
+            # TABLEAU
+            # ------------------------------------------------
+
             display_planning = planning[
                 [
                     "Nom",
@@ -1309,6 +1368,12 @@ elif page == "🎯 Planification":
                     "Phase",
                 ]
             ].copy()
+
+            display_planning[
+                "Date"
+            ] = display_planning[
+                "Date"
+            ].apply(format_date)
 
             display_planning[
                 "Distance A/R"
@@ -1328,6 +1393,10 @@ elif page == "🎯 Planification":
                 hide_index=True,
             )
 
+            # ------------------------------------------------
+            # CHRONOLOGIE
+            # ------------------------------------------------
+
             st.subheader(
                 "📈 Chronologie"
             )
@@ -1344,18 +1413,6 @@ elif page == "🎯 Planification":
                     f"{competition['Coût trajet']:.2f} €"
                 )
 
-        else:
-
-            st.info(
-                "Sélectionne les compétitions de la saison."
-            )
-
-    else:
-
-        st.info(
-            "Entre le nom d'un lutteur."
-        )
-
 
 # ============================================================
 # MON CLUB
@@ -1363,16 +1420,21 @@ elif page == "🎯 Planification":
 
 elif page == "🏠 Mon club":
 
-    st.title(
+    st.header(
         "🏠 Mon club"
     )
 
     st.write(
-        "Ces paramètres servent à calculer "
-        "les distances et les coûts de déplacement."
+        "Configure ici l'adresse de ton club et "
+        "les paramètres utilisés pour calculer "
+        "les déplacements."
     )
 
     st.divider()
+
+    # --------------------------------------------------------
+    # CLUB
+    # --------------------------------------------------------
 
     st.subheader(
         "🏠 Informations du club"
@@ -1405,6 +1467,10 @@ elif page == "🏠 Mon club":
             "Ville",
             value=club["Ville"],
         )
+
+    # --------------------------------------------------------
+    # VEHICULE
+    # --------------------------------------------------------
 
     st.divider()
 
@@ -1450,6 +1516,10 @@ elif page == "🏠 Mon club":
 
     st.divider()
 
+    # --------------------------------------------------------
+    # ENREGISTRER
+    # --------------------------------------------------------
+
     save = st.button(
         "💾 Enregistrer les paramètres",
         type="primary",
@@ -1477,8 +1547,9 @@ elif page == "🏠 Mon club":
         if latitude is None:
 
             st.error(
-                "❌ Impossible de trouver cette adresse. "
-                "Vérifie l'adresse, le code postal et la ville."
+                "❌ Adresse introuvable. "
+                "Vérifie l'adresse, le code postal "
+                "et la ville."
             )
 
         else:
@@ -1495,8 +1566,6 @@ elif page == "🏠 Mon club":
                 "Peages": tolls,
             }
 
-            club = st.session_state.club
-
             st.success(
                 "✅ Paramètres du club enregistrés."
             )
@@ -1506,6 +1575,12 @@ elif page == "🏠 Mon club":
                 f"{latitude:.5f}, "
                 f"{longitude:.5f}"
             )
+
+            st.rerun()
+
+    # --------------------------------------------------------
+    # POSITION ACTUELLE
+    # --------------------------------------------------------
 
     if club["Latitude"] is not None:
 
@@ -1526,11 +1601,13 @@ elif page == "🏠 Mon club":
         )
 
         st.write(
-            f"Latitude : `{club['Latitude']:.5f}`"
+            f"Latitude : "
+            f"`{club['Latitude']:.5f}`"
         )
 
         st.write(
-            f"Longitude : `{club['Longitude']:.5f}`"
+            f"Longitude : "
+            f"`{club['Longitude']:.5f}`"
         )
 
         club_map = pd.DataFrame(
@@ -1568,7 +1645,7 @@ elif page == "🏠 Mon club":
 
             st.metric(
                 "🚗 Consommation",
-                f"{club['Consommation']:.1f} L/100",
+                f"{club['Consommation']:.1f} L/100 km",
             )
 
         with c3:
@@ -1580,7 +1657,7 @@ elif page == "🏠 Mon club":
 
 
 # ============================================================
-# FOOTER
+# SIDEBAR
 # ============================================================
 
 st.sidebar.divider()
@@ -1598,5 +1675,5 @@ else:
     )
 
 st.sidebar.caption(
-    "🤼 Lutte Calendar V1.2"
+    "🤼 Lutte Calendar V1.3"
 )

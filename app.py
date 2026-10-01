@@ -412,6 +412,14 @@ elif not all(
 if "club" not in st.session_state:
     st.session_state.club = DEFAULT_CLUB.copy()
 
+if "wrestlers" not in st.session_state:
+    st.session_state.wrestlers = pd.DataFrame(
+        columns=[
+            "Nom", "Prenom", "Categorie", "Poids", "Objectif",
+            "Competitions", "Roles", "Priorites"
+        ]
+    )
+
 
 df = st.session_state.competitions.copy()
 
@@ -1454,113 +1462,363 @@ elif page == "➕ Ajouter une compétition":
 
 # ============================================================
 # PLANIFICATION
-# ============================================================
-
+# =========================
+# 6) PLANIFICATION DES LUTTEURS
+# =========================
 elif page == "🎯 Planification":
 
-    st.title(
-        "🎯 Planification sportive"
-    )
+    st.title("🎯 Planification de la saison")
+    st.caption("Construis la saison de chaque lutteur compétition par compétition.")
 
-    athlete = st.text_input(
-        "Nom du lutteur",
-        placeholder="Ex : Jean Dupont",
-    )
+    def wrestler_display_name(row):
+        return f"{row['Prenom']} {row['Nom']}".strip()
 
-    if athlete:
+    def save_wrestler(
+        nom, prenom, categorie, poids, objectif,
+        competitions, roles, priorites, index=None
+    ):
+        new_row = {
+            "Nom": nom,
+            "Prenom": prenom,
+            "Categorie": categorie,
+            "Poids": poids,
+            "Objectif": objectif,
+            "Competitions": competitions,
+            "Roles": roles,
+            "Priorites": priorites,
+        }
 
-        objective = st.selectbox(
-            "🎯 Objectif principal",
-            [
-                "Développement / apprentissage",
-                "Championnat régional",
-                "Championnat de France",
-                "Compétition internationale",
-                "Autre",
-            ],
-        )
+        if index is None:
+            st.session_state.wrestlers.loc[len(st.session_state.wrestlers)] = new_row
+        else:
+            st.session_state.wrestlers.loc[index] = new_row
 
-        st.success(
-            f"Objectif de {athlete} : "
-            f"**{objective}**"
-        )
+    st.subheader("🥋 Mes lutteurs")
 
-        selected = st.multiselect(
-            "Sélectionner les compétitions",
-            options=df["Nom"].tolist(),
-        )
+    with st.expander("➕ Ajouter un lutteur", expanded=st.session_state.wrestlers.empty):
+        with st.form("add_wrestler"):
+            c1, c2 = st.columns(2)
+            nom = c1.text_input("Nom")
+            prenom = c2.text_input("Prénom")
 
-        if selected:
-
-            planning = df[
-                df["Nom"].isin(selected)
-            ].copy()
-
-            planning[
-                "Jours avant"
-            ] = planning[
-                "Date"
-            ].apply(
-                lambda x:
-                (x - date.today()).days
+            c3, c4 = st.columns(2)
+            categorie = c3.text_input(
+                "Catégorie d'âge",
+                placeholder="U15, U17, U20, Senior…"
+            )
+            poids = c4.text_input(
+                "Poids / catégorie",
+                placeholder="-57 kg"
             )
 
-            planning[
-                "Phase"
-            ] = planning[
-                "Jours avant"
-            ].apply(
-                phase_planification
+            objectif = st.text_input(
+                "🎯 Objectif principal de la saison",
+                placeholder="Championnat de France, qualification régionale…"
             )
 
-            planning = planning.sort_values(
-                "Date"
-            )
+            if st.form_submit_button("Ajouter le lutteur", type="primary"):
+                if not nom.strip() or not prenom.strip():
+                    st.error("Indique au minimum le nom et le prénom.")
+                else:
+                    save_wrestler(
+                        nom.strip(),
+                        prenom.strip(),
+                        categorie.strip(),
+                        poids.strip(),
+                        objectif.strip(),
+                        [],
+                        {},
+                        {}
+                    )
+                    st.success("Lutteur ajouté.")
+                    st.rerun()
 
-            st.dataframe(
-                planning[
-                    [
-                        "Nom",
-                        "Date",
-                        "Ville",
-                        "Importance",
-                        "Jours avant",
-                        "Phase",
-                    ]
-                ],
-                use_container_width=True,
-                hide_index=True,
-            )
+    if st.session_state.wrestlers.empty:
+        st.info("Aucun lutteur pour le moment. Ajoute ton premier lutteur ci-dessus.")
+    else:
+        names = [
+            wrestler_display_name(row)
+            for _, row in st.session_state.wrestlers.iterrows()
+        ]
 
-            st.subheader(
-                "📈 Chronologie"
-            )
+        selected_name = st.selectbox("👤 Lutteur à planifier", names)
+        selected_index = names.index(selected_name)
+        wrestler = st.session_state.wrestlers.iloc[selected_index]
 
-            for _, competition in planning.iterrows():
+        st.divider()
 
-                st.write(
-                    f"**{format_date(competition['Date'])}** "
-                    f"— {competition['Nom']} "
-                    f"→ {competition['Phase']}"
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Lutteur", selected_name)
+        c2.metric("Catégorie", wrestler["Categorie"] or "—")
+        c3.metric("Poids", wrestler["Poids"] or "—")
+        c4.metric("Compétitions", len(wrestler["Competitions"]))
+
+        if wrestler["Objectif"]:
+            st.info(f"🎯 **Objectif principal :** {wrestler['Objectif']}")
+
+        with st.expander("✏️ Modifier la fiche du lutteur"):
+            with st.form(f"edit_wrestler_{selected_index}"):
+                e1, e2 = st.columns(2)
+                edit_nom = e1.text_input("Nom", value=wrestler["Nom"])
+                edit_prenom = e2.text_input("Prénom", value=wrestler["Prenom"])
+
+                e3, e4 = st.columns(2)
+                edit_categorie = e3.text_input(
+                    "Catégorie d'âge",
+                    value=wrestler["Categorie"]
+                )
+                edit_poids = e4.text_input(
+                    "Poids / catégorie",
+                    value=wrestler["Poids"]
                 )
 
-        else:
+                edit_objectif = st.text_input(
+                    "Objectif principal",
+                    value=wrestler["Objectif"]
+                )
 
-            st.info(
-                "Sélectionne les compétitions "
-                "de la saison."
+                if st.form_submit_button("Enregistrer"):
+                    save_wrestler(
+                        edit_nom.strip(),
+                        edit_prenom.strip(),
+                        edit_categorie.strip(),
+                        edit_poids.strip(),
+                        edit_objectif.strip(),
+                        wrestler["Competitions"],
+                        wrestler["Roles"],
+                        wrestler["Priorites"],
+                        selected_index
+                    )
+                    st.success("Fiche mise à jour.")
+                    st.rerun()
+
+        st.subheader("📅 Programmer les compétitions")
+
+        competitions_df = st.session_state.competitions.copy()
+        competitions_df = competitions_df.sort_values("Date")
+
+        if competitions_df.empty:
+            st.warning("Aucune compétition disponible.")
+        else:
+            selected_ids = set(wrestler["Competitions"])
+            current_roles = dict(wrestler["Roles"])
+            current_priorities = dict(wrestler["Priorites"])
+
+            role_options = [
+                "Préparation",
+                "Compétition",
+                "Qualification",
+                "Objectif principal",
+                "Expérience"
+            ]
+            priority_options = ["Faible", "Normale", "Haute"]
+
+            for _, comp in competitions_df.iterrows():
+                comp_id = str(comp["ID"])
+                selected = comp_id in selected_ids
+
+                with st.container(border=True):
+                    a, b, c, d = st.columns([0.8, 2.8, 1.5, 1.5])
+
+                    checked = a.checkbox(
+                        "Participer",
+                        value=selected,
+                        key=f"participate_{selected_index}_{comp_id}"
+                    )
+
+                    b.markdown(
+                        f"**{comp['Nom']}**  \n"
+                        f"📅 {format_date(comp['Date'])} · "
+                        f"📍 {comp['Ville']} · "
+                        f"{comp['Style']} · {comp['Niveau']}"
+                    )
+
+                    previous_role = current_roles.get(comp_id, "Compétition")
+                    previous_priority = current_priorities.get(comp_id, "Normale")
+
+                    role = c.selectbox(
+                        "Rôle",
+                        role_options,
+                        index=(
+                            role_options.index(previous_role)
+                            if previous_role in role_options else 1
+                        ),
+                        key=f"role_{selected_index}_{comp_id}",
+                        disabled=not checked
+                    )
+
+                    priority = d.selectbox(
+                        "Priorité",
+                        priority_options,
+                        index=(
+                            priority_options.index(previous_priority)
+                            if previous_priority in priority_options else 1
+                        ),
+                        key=f"priority_{selected_index}_{comp_id}",
+                        disabled=not checked
+                    )
+
+                    if checked:
+                        selected_ids.add(comp_id)
+                        current_roles[comp_id] = role
+                        current_priorities[comp_id] = priority
+                    else:
+                        selected_ids.discard(comp_id)
+                        current_roles.pop(comp_id, None)
+                        current_priorities.pop(comp_id, None)
+
+            if st.button("💾 Enregistrer la saison", type="primary"):
+                st.session_state.wrestlers.at[selected_index, "Competitions"] = sorted(
+                    selected_ids
+                )
+                st.session_state.wrestlers.at[selected_index, "Roles"] = current_roles
+                st.session_state.wrestlers.at[selected_index, "Priorites"] = current_priorities
+                st.success("Saison enregistrée.")
+                st.rerun()
+
+        st.divider()
+        st.subheader("📆 Calendrier annuel du lutteur")
+
+        selected_ids = set(wrestler["Competitions"])
+        selected_comps = competitions_df[
+            competitions_df["ID"].astype(str).isin(selected_ids)
+        ].copy()
+
+        if selected_comps.empty:
+            st.info("Aucune compétition n'est encore programmée pour ce lutteur.")
+        else:
+            selected_comps["Date_dt"] = pd.to_datetime(
+                selected_comps["Date"],
+                errors="coerce"
+            )
+            selected_comps = selected_comps.dropna(subset=["Date_dt"])
+            selected_comps["Mois"] = selected_comps["Date_dt"].dt.month
+            selected_comps["Annee"] = selected_comps["Date_dt"].dt.year
+
+            min_date = selected_comps["Date_dt"].min()
+            max_date = selected_comps["Date_dt"].max()
+
+            for year in range(min_date.year, max_date.year + 1):
+                st.markdown(f"### Saison {year}")
+
+                month_cols = st.columns(3)
+
+                for month in range(1, 13):
+                    month_data = selected_comps[
+                        (selected_comps["Annee"] == year) &
+                        (selected_comps["Mois"] == month)
+                    ].sort_values("Date_dt")
+
+                    col = month_cols[(month - 1) % 3]
+
+                    with col:
+                        st.markdown(f"**{month_name(month).capitalize()}**")
+
+                        if month_data.empty:
+                            st.caption("Aucune compétition")
+                        else:
+                            for _, comp in month_data.iterrows():
+                                comp_id = str(comp["ID"])
+                                role = current_roles.get(
+                                    comp_id,
+                                    wrestler["Roles"].get(comp_id, "Compétition")
+                                )
+                                priority = current_priorities.get(
+                                    comp_id,
+                                    wrestler["Priorites"].get(comp_id, "Normale")
+                                )
+
+                                badge = {
+                                    "Haute": "🔴",
+                                    "Normale": "🟠",
+                                    "Faible": "🟢"
+                                }.get(priority, "🟠")
+
+                                role_icon = {
+                                    "Objectif principal": "🏆",
+                                    "Qualification": "🎯",
+                                    "Compétition": "🤼",
+                                    "Préparation": "🏋️",
+                                    "Expérience": "🌱"
+                                }.get(role, "🤼")
+
+                                st.markdown(
+                                    f"""
+                                    <div style="
+                                        border:1px solid #d9d9d9;
+                                        border-radius:8px;
+                                        padding:9px;
+                                        margin-bottom:8px;
+                                        background:#fafafa;">
+                                        <b>{format_date(comp['Date'])}</b><br>
+                                        <b>{comp['Nom']}</b><br>
+                                        📍 {comp['Ville']}<br>
+                                        {role_icon} {role}<br>
+                                        {badge} Priorité {priority}
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
+
+        st.divider()
+        st.subheader("📊 Synthèse de saison")
+
+        selected_ids = set(wrestler["Competitions"])
+        season_comps = competitions_df[
+            competitions_df["ID"].astype(str).isin(selected_ids)
+        ].copy()
+
+        if not season_comps.empty:
+            roles = wrestler["Roles"]
+            priorities = wrestler["Priorites"]
+
+            total = len(season_comps)
+            objectives = sum(
+                roles.get(str(cid), "") == "Objectif principal"
+                for cid in season_comps["ID"]
+            )
+            qualifications = sum(
+                roles.get(str(cid), "") == "Qualification"
+                for cid in season_comps["ID"]
+            )
+            high_priority = sum(
+                priorities.get(str(cid), "") == "Haute"
+                for cid in season_comps["ID"]
             )
 
-    else:
+            s1, s2, s3, s4 = st.columns(4)
+            s1.metric("Compétitions", total)
+            s2.metric("Objectifs principaux", objectives)
+            s3.metric("Qualifications", qualifications)
+            s4.metric("Priorités hautes", high_priority)
 
-        st.info(
-            "Entre le nom d'un lutteur."
-        )
+            summary_rows = []
+            for _, comp in season_comps.sort_values("Date").iterrows():
+                cid = str(comp["ID"])
+                summary_rows.append({
+                    "Date": format_date(comp["Date"]),
+                    "Compétition": comp["Nom"],
+                    "Ville": comp["Ville"],
+                    "Rôle": roles.get(cid, "Compétition"),
+                    "Priorité": priorities.get(cid, "Normale")
+                })
 
+            st.dataframe(
+                pd.DataFrame(summary_rows),
+                use_container_width=True,
+                hide_index=True
+            )
 
-# ============================================================
-# FINANCES CLUB
-# ============================================================
+        st.divider()
+        with st.expander("⚠️ Gestion du lutteur"):
+            if st.button("🗑️ Supprimer ce lutteur", type="secondary"):
+                st.session_state.wrestlers = (
+                    st.session_state.wrestlers.drop(index=selected_index)
+                    .reset_index(drop=True)
+                )
+                st.success("Lutteur supprimé.")
+                st.rerun()
+
 
 elif page == "💰 Finances club":
 
@@ -1859,7 +2117,7 @@ elif page == "⚙️ Paramètres club":
 st.sidebar.divider()
 
 st.sidebar.caption(
-    "🤼 Lutte Calendar V1.8"
+    "🤼 Lutte Calendar V2.0"
 )
 
 st.sidebar.caption(
